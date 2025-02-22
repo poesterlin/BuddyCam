@@ -1,6 +1,16 @@
-
 services:
-  rtcam: 
+  rtcam:
     build: .
-    ports:
-      - "3000:3000"
+    env_file: .env
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tex.rule=Host(`${HOST_DOMAIN}`) || HOST(`cam.homelab`)"
+      - "traefik.http.services.tex.loadbalancer.server.port=3000"
+    networks:
+      - traefik_web
+
+networks:
+  traefik_web:
+    external: true
+
