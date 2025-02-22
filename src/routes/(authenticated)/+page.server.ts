@@ -18,7 +18,9 @@ export const actions: Actions = {
 
 		// get friends
 		const friends = await db
-			.select()
+			.select({
+				id: friendsTable.friendId
+			})
 			.from(friendsTable)
 			.where(and(eq(friendsTable.userId, locals.user.id), eq(friendsTable.accepted, true)));
 
@@ -31,14 +33,15 @@ export const actions: Actions = {
 		await db.insert(matchupTable).values({
 			id: matchId,
 			userId: locals.user.id,
-			createdAt: new Date()
+			createdAt: new Date(),
+			friendId: null
 		});
 
 		// notify the friends
 		const notifications = friends.map((friend) => {
 			return {
 				id: generateId(),
-				userId: friend.friendId,
+				userId: friend.id,
 				createdAt: new Date(),
 				type: EventType.READY,
 				data: {

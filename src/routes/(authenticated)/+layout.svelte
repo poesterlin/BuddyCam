@@ -46,7 +46,7 @@
 					{:else}
 						<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
 							<IconBell></IconBell>
-							{#if events.new.length > 0}
+							{#if events.count > 0}
 								<span class="badge">{events.count}</span>
 							{/if}
 						</button>

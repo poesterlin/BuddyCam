@@ -3,8 +3,20 @@
 	import { IconCancel, IconCopy, IconUserCircle } from '@tabler/icons-svelte';
 	import type { PageServerData } from './$types';
 	import { enhance } from '$app/forms';
+	import { events } from '$lib/client/messages.svelte';
+	import { EventType } from '$lib/events';
+	import { invalidate } from '$app/navigation';
 
 	let { data }: { data: PageServerData } = $props();
+
+	$effect(() => {
+		const matching: string[] = [EventType.FRIEND_REQUEST_ACCEPTED, EventType.FRIEND_REQUEST];
+		const e = events.new.find(({ event }) => matching.includes(event.type));
+		if (e) {
+			invalidate(({ pathname }) => pathname === '/friends');
+			e.clear();
+		}
+	});
 
 	function copyFriendLink() {
 		const url = window.location.origin + '/friends/request?id=' + data.user.id;
