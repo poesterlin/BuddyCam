@@ -52,10 +52,9 @@ export const actions: Actions = {
 			try {
 				await db.insert(table.usersTable).values({
 					id: userId,
-					email: null,
+					email: form.email || null,
 					createdAt: new Date(),
 					lastLogin: new Date(),
-
 					username,
 					passwordHash
 				});

@@ -4,7 +4,7 @@ const fullCascade = { onDelete: 'cascade', onUpdate: 'cascade' } as const;
 
 export const usersTable = pgTable('user', {
 	id: text('id').primaryKey(),
-	email: text('email').unique(),
+	email: text('email').unique('user_email_unique', { nulls: 'distinct' }),
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
 	lastLogin: timestamp('last_login', { withTimezone: true, mode: 'date' }),
 	username: text('username').notNull().unique(),
