@@ -61,6 +61,10 @@ export const actions: Actions = {
 
 			assert(targetedUser, 400, 'User not found');
 
+			if (locals.user.id === targetedUser.id) {
+				error(400, 'You are already friends with yourself, silly!');
+			}
+
 			// check if they are already friends
 			const [existingFriendship] = await db
 				.select()

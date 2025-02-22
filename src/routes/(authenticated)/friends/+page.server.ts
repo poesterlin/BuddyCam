@@ -17,7 +17,7 @@ export const load: PageServerLoad = async (event) => {
 			user: usersTable.username
 		})
 		.from(friendsTable)
-		.where(and(eq(friendsTable.userId, locals.user.id), eq(friendsTable.accepted, true)))
+		.where(and(eq(friendsTable.friendId, locals.user.id), eq(friendsTable.accepted, true)))
 		.innerJoin(usersTable, eq(friendsTable.userId, usersTable.id))
 		.orderBy(asc(friendsTable.accepted), desc(usersTable.username));
 
