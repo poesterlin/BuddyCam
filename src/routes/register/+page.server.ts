@@ -74,7 +74,8 @@ export const actions: Actions = {
 				type: EventType.REGISTER,
 				data: null,
 				sendAt: null,
-				createdAt: new Date()
+				createdAt: new Date(),
+				isTechnical: false
 			} as any);
 
 			let to = '/';

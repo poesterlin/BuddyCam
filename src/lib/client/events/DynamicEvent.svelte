@@ -5,6 +5,7 @@
 	import FriendRequestAccepted from './FriendRequestAccepted.svelte';
 	import ReadyEvent from './ReadyEvent.svelte';
 	import Noop from './Noop.svelte';
+	import RegisterEvent from './RegisterEvent.svelte';
 
 	let { event, clear }: { clear: () => void; event: Event } = $props();
 
@@ -12,6 +13,9 @@
 
 	export function getEvent(type: string) {
 		switch (type) {
+			case EventType.REGISTER:
+				return RegisterEvent;
+
 			case EventType.FRIEND_REQUEST:
 				return FriendRequest;
 
