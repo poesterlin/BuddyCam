@@ -30,11 +30,11 @@
 
 {#if page.state.showNotifications}
 	<Modal title="Notifications" close={closeModal}>
-		<ul class="mt-4 flex flex-col gap-4">
+		<ul class="m-4 flex flex-col gap-4">
 			{#each events.new as { event, clear }}
 				<DynamicEvent {event} {clear}></DynamicEvent>
 			{:else}
-				<p class="text-gray-500">No new notifications</p>
+				<p class="text-amber-400">No new notifications</p>
 			{/each}
 		</ul>
 	</Modal>

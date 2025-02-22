@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { IconX } from '@tabler/icons-svelte';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 
 	let dialogEl: HTMLDialogElement;
 
@@ -26,7 +26,8 @@
 	bind:this={dialogEl}
 	class="m-auto w-lg rounded-2xl bg-white"
 	onclick={onlySelf(close)}
-	out:fade={{ duration: 300 }}
+	in:fly={{ duration: 300, y: 400 }}
+	out:fly={{ duration: 300, x: -400 }}
 >
 	<form method="dialog" onsubmit={close} class="relative overflow-hidden px-6 py-4">
 		<h1 class="text-lg font-bold text-rose-600">{title}</h1>
@@ -54,20 +55,5 @@
 
 	dialog {
 		max-width: 95vw;
-	}
-
-	dialog[open] {
-		animation: fadeIn 0.3s ease-out forwards;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(-50px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
 	}
 </style>
