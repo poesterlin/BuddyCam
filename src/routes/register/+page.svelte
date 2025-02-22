@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { fade } from 'svelte/transition';
+
+	let { form } = $props();
 </script>
 
 <div class="background flex h-screen items-center justify-center bg-fuchsia-50">
@@ -38,6 +41,12 @@
 						required
 					/>
 				</div>
+
+				{#if form?.message}
+					<p class="text-center text-sm text-balance text-rose-500" transition:fade>
+						{form.message}
+					</p>
+				{/if}
 
 				<input type="hidden" name="redirect" value={page.url.search} />
 

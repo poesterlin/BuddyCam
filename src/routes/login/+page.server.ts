@@ -29,11 +29,11 @@ export const actions: Actions = {
 
 			if (!validateUsername(username)) {
 				return fail(400, {
-					message: 'Invalid username (min 3, max 31 characters, alphanumeric only)'
+					message: 'Oopsie! It looks like your username needs a little more love. Please try again! 😊'
 				});
 			}
 			if (!validatePassword(password)) {
-				return fail(400, { message: 'Invalid password (min 6, max 255 characters)' });
+				return fail(400, { message: 'Oopsie! It looks like your password needs a little more love. Please try again! 😊' });
 			}
 
 			const results = await db
@@ -43,7 +43,7 @@ export const actions: Actions = {
 
 			const existingUser = results.at(0);
 			if (!existingUser) {
-				return fail(400, { message: 'Incorrect username or password' });
+				return fail(400, { message: 'Oh no! We couldn\'t find that username or password. Please double-check and try again! 🌟' });
 			}
 
 			const validPassword = await verify(existingUser.passwordHash, password, {
@@ -53,7 +53,7 @@ export const actions: Actions = {
 				parallelism: 1
 			});
 			if (!validPassword) {
-				return fail(400, { message: 'Incorrect username or password' });
+				return fail(400, { message: 'Oh no! We couldn\'t find that username or password. Please double-check and try again! 🌟' });
 			}
 
 			const sessionToken = auth.generateSessionToken();

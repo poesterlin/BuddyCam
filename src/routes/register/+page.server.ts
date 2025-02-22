@@ -27,10 +27,10 @@ export const actions: Actions = {
 			const { username, password } = form;
 
 			if (!validateUsername(username)) {
-				return fail(400, { message: 'Invalid username' });
+				return fail(400, { message: 'Oopsie! It looks like your username needs a little more love. Please try again! 😊' });
 			}
 			if (!validatePassword(password)) {
-				return fail(400, { message: 'Invalid password' });
+				return fail(400, { message: 'Oopsie! It looks like your password needs a little more love. Please try again! 😊' });
 			}
 
 			const userId = generateId();
@@ -49,7 +49,7 @@ export const actions: Actions = {
 				const session = await auth.createSession(sessionToken, userId);
 				auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 			} catch {
-				return fail(500, { message: 'An error has occurred' });
+				return fail(500, { message: 'Oopsie! It looks like something went wrong. Please try again! 😊' });
 			}
 
 			await db.insert(table.eventsTable).values({
