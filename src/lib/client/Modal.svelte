@@ -10,14 +10,22 @@
 	});
 
 	const { close, children, title } = $props();
+
+	function onlySelf(fn: () => void) {
+		return (event: MouseEvent) => {
+			if (event.target === dialogEl) {
+				fn();
+			}
+		};
+	}
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <dialog
 	bind:this={dialogEl}
-	class="min-w-lg m-auto rounded-2xl bg-white"
-	onclick={close}
+	class="m-auto w-lg rounded-2xl bg-white"
+	onclick={onlySelf(close)}
 	out:fade={{ duration: 300 }}
 >
 	<form method="dialog" onsubmit={close} class="relative overflow-hidden px-6 py-4">
@@ -25,7 +33,7 @@
 		<button
 			type="button"
 			onclick={close}
-			class="absolute right-4 top-5 text-gray-400 hover:text-gray-600 focus:outline-none"
+			class="absolute top-5 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
 			aria-label="Close"
 		>
 			<IconX class="text-purple-800" />
@@ -42,6 +50,10 @@
 		background-color: hsla(351, 40%, 86%, 0.4);
 		backdrop-filter: blur(2px);
 		pointer-events: all;
+	}
+
+	dialog {
+		max-width: 95vw;
 	}
 
 	dialog[open] {

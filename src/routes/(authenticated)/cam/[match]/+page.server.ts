@@ -78,6 +78,7 @@ export const actions: Actions = {
 					type: EventType.CAPTURE,
 					userId: other,
 					createdAt: new Date(),
+					isTechnical: true,
 					data: {
 						matchId: match
 					} satisfies CaptureData
@@ -92,8 +93,6 @@ export const actions: Actions = {
 				matchupId: match
 			});
 
-			console.log('uploading file');
-
 			await uploadFile(id, form.photo);
 
 			// add upload event
@@ -102,6 +101,7 @@ export const actions: Actions = {
 				type: EventType.UPLOAD,
 				userId: other,
 				createdAt: new Date(),
+				isTechnical: true,
 				data: {
 					matchId: match
 				} satisfies UploadData

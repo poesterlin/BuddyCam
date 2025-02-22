@@ -4,6 +4,7 @@
 	import { events } from '$lib/client/messages.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { applyAction, deserialize } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
 
 	let videoRef: HTMLVideoElement;
 	let canvasRef: HTMLCanvasElement;
@@ -13,10 +14,10 @@
 
 	let isUploading = $state(false);
 	$effect(() => {
-		const shouldTrigger = events.new.find((event) => event.type === EventType.CAPTURE);
+		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
 		if (shouldTrigger) {
 			captureAndUpload();
-			shouldTrigger.close();
+			shouldTrigger.clear();
 		}
 	});
 

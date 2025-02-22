@@ -5,6 +5,7 @@ import { source } from 'sveltekit-sse';
 
 // state rune to store new events
 const newEvents = $state<{ event: Event; clear: () => void }[]>([]);
+const count = $derived(newEvents.reduce((acc, { event }) => acc + (event.isTechnical ? 0 : 1), 0));
 
 export const events = {
 	new: newEvents,
@@ -15,6 +16,9 @@ export const events = {
 		fetch(`/events?id=${id}`, { method: 'DELETE' }).then(() => {
 			console.log('event cleared');
 		});
+	},
+	get count() {
+		return count;
 	}
 };
 

@@ -1,5 +1,14 @@
 import { read } from '$app/server';
-import { boolean, integer, json, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+	boolean,
+	index,
+	integer,
+	json,
+	pgTable,
+	text,
+	timestamp,
+	unique
+} from 'drizzle-orm/pg-core';
 
 export const usersTable = pgTable('user', {
 	id: text('id').primaryKey(),
@@ -20,34 +29,41 @@ export const sessionTable = pgTable('session', {
 
 export type Session = typeof sessionTable.$inferSelect;
 
-// TODO: add unique constraint on userId and friendId
-export const friendsTable = pgTable('friend', {
-	id: text('id').primaryKey(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => usersTable.id),
-	friendId: text('friend_id')
-		.notNull()
-		.references(() => usersTable.id),
-	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
-	accepted: boolean('accepted').notNull().default(false)
-});
+export const friendsTable = pgTable(
+	'friend',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => usersTable.id),
+		friendId: text('friend_id')
+			.notNull()
+			.references(() => usersTable.id),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+		accepted: boolean('accepted').notNull().default(false)
+	},
+	(t) => [unique().on(t.userId, t.friendId)]
+);
 
 export type Friend = typeof friendsTable.$inferSelect;
 
-// TODO: add index on userId and sendAt
-export const eventsTable = pgTable('event', {
-	id: text('id').primaryKey(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => usersTable.id),
-	type: text('type').notNull(),
-	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
-	sendAt: timestamp('send_at', { withTimezone: true, mode: 'date' }),
-	data: json('data'),
-	persistent: boolean('persistent').notNull().default(false),
-	read: boolean('read').notNull().default(false)
-});
+export const eventsTable = pgTable(
+	'event',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => usersTable.id),
+		type: text('type').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+		sendAt: timestamp('send_at', { withTimezone: true, mode: 'date' }),
+		data: json('data'),
+		persistent: boolean('persistent').notNull().default(false),
+		read: boolean('read').notNull().default(false),
+		isTechnical: boolean('is_technical').notNull()
+	},
+	(t) => [index().on(t.userId, t.sendAt)]
+);
 
 export type Event = typeof eventsTable.$inferSelect;
 
@@ -56,8 +72,7 @@ export const matchupTable = pgTable('matchup', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => usersTable.id),
-	friendId: text('opponent_id')
-		.references(() => usersTable.id),
+	friendId: text('opponent_id').references(() => usersTable.id),
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull()
 });
 

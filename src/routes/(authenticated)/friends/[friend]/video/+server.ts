@@ -2,9 +2,9 @@ import { db } from '$lib/server/db';
 import { filesTable, matchupTable } from '$lib/server/db/schema';
 import { ImageVideoProcessor, type ImagePair } from '$lib/server/process';
 import { validateAuth } from '$lib/server/util';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { getFile } from '$lib/server/s3';
-import { readFile } from 'fs/promises';
+import { createReadStream, readFile } from 'fs';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {
@@ -12,41 +12,48 @@ export const GET: RequestHandler = async (event) => {
 	const { friend } = event.params;
 
 	const matchups = await db
-		.select({
-			first: filesTable.id,
-			second: filesTable.id
-		})
+		.select()
 		.from(matchupTable)
-		.innerJoin(
-			filesTable,
-			and(eq(matchupTable.userId, filesTable.userId), eq(matchupTable.id, filesTable.matchupId))
+		.where(
+			or(
+				and(eq(matchupTable.userId, locals.user.id), eq(matchupTable.friendId, friend)),
+				and(eq(matchupTable.friendId, locals.user.id), eq(matchupTable.userId, friend))
+			)
 		)
-		.innerJoin(
-			filesTable,
-			and(eq(matchupTable.friendId, filesTable.userId), eq(matchupTable.id, filesTable.matchupId))
-		)
-		.where(and(eq(matchupTable.userId, locals.user.id), eq(matchupTable.friendId, friend)));
+		.orderBy(matchupTable.createdAt);
 
-	const processor = new ImageVideoProcessor({
-		videoOutput: 'output.mp4',
-		fps: 24,
-		cleanup: true
-	});
+	if (!matchups.length) {
+		console.log('No matchups found');
+		return new Response(null, { status: 404 });
+	}
 
-	const images = await Promise.all(
-		matchups.map(async (matchup) => {
-			const [first, second] = await Promise.all([getFile(matchup.first), getFile(matchup.second)]);
+	const pairs: ImagePair[] = [];
+	for (const matchup of matchups) {
+		const [fistFile, secondFile] = await db
+			.select()
+			.from(filesTable)
+			.where(eq(filesTable.matchupId, matchup.id))
+			.orderBy(filesTable.createdAt)
+			.limit(2);
 
-			return { first, second } as ImagePair;
-		})
-	);
+		if (!fistFile || !secondFile) {
+			continue;
+		}
 
-	const videoPath = await processor.processImagesAndCreateVideo(images);
-	const buffer = await readFile(videoPath);
+		const [first, second] = await Promise.all([getFile(fistFile.id), getFile(secondFile.id)]);
+		pairs.push({ first, second });
+	}
 
-	return new Response(buffer, {
+	const processor = new ImageVideoProcessor({ folder: friend, fps: 2 });
+	const videoPath = await processor.processImagesAndCreateVideo(pairs);
+
+	const stream = await createReadStream(videoPath);
+
+	// @ts-expect-error - Stream is not a valid ResponseInit but it works
+	return new Response(stream, {
 		headers: {
 			'Content-Type': 'video/mp4'
+			// 'Cache-Control': 'public, max-age=3600' // 1 hour
 		}
 	});
 };

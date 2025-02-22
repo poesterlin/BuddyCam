@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import path from 'path';
+import { join } from 'path';
 import fs from 'fs/promises';
 import { env } from '$env/dynamic/private';
 import { assert } from './util';
@@ -26,25 +26,26 @@ enum MergeDirection {
 }
 
 interface ProcessingOptions {
-	videoOutput: string;
+	folder: string;
 	fps?: number;
 	cleanup?: boolean;
 }
 
 export class ImageVideoProcessor {
 	private readonly outputDir = env.OUTPUT_DIR!;
-	private readonly videoOutput?: string;
+	private readonly videoOutput = 'output.mp4';
 	private readonly fps: number;
 	private readonly shouldCleanup: boolean;
 
-	constructor({ videoOutput, fps = 24, cleanup = false }: Partial<ProcessingOptions> = {}) {
-		this.videoOutput = videoOutput;
+	constructor({ folder, fps = 24, cleanup = false }: ProcessingOptions) {
+		this.outputDir = join(this.outputDir, folder);
+
 		this.fps = fps;
 		this.shouldCleanup = cleanup;
 	}
 
-	private async getImageDimensions(imageBuffer: Buffer): Promise<ImageDimensions> {
-		const metadata = await sharp(imageBuffer).metadata();
+	private async getImageDimensions(image: Buffer): Promise<ImageDimensions> {
+		const metadata = await sharp(image).metadata();
 
 		if (!metadata.width || !metadata.height) {
 			throw new ImageProcessingError('Invalid image metadata');
@@ -81,11 +82,11 @@ export class ImageVideoProcessor {
 		return horizontalDiff < verticalDiff ? MergeDirection.HORIZONTAL : MergeDirection.VERTICAL;
 	}
 
-	public async mergeSideBySide(image1Buffer: Buffer, image2Buffer: Buffer): Promise<Buffer> {
+	public async mergeSideBySide(image1: Buffer, image2: Buffer): Promise<Buffer> {
 		try {
 			const [img1Meta, img2Meta] = await Promise.all([
-				sharp(image1Buffer).metadata(),
-				sharp(image2Buffer).metadata()
+				sharp(image1).metadata(),
+				sharp(image2).metadata()
 			]);
 
 			if (!img1Meta.width || !img2Meta.width || !img1Meta.height || !img2Meta.height) {
@@ -101,8 +102,8 @@ export class ImageVideoProcessor {
 				}
 			})
 				.composite([
-					{ input: image1Buffer, left: 0, top: 0 },
-					{ input: image2Buffer, left: img1Meta.width, top: 0 }
+					{ input: image1, left: 0, top: 0 },
+					{ input: image2, left: img1Meta.width, top: 0 }
 				])
 				.jpeg()
 				.toBuffer();
@@ -114,11 +115,11 @@ export class ImageVideoProcessor {
 		}
 	}
 
-	private async mergeTopAndBottom(image1Buffer: Buffer, image2Buffer: Buffer): Promise<Buffer> {
+	private async mergeTopAndBottom(image1: Buffer, image2: Buffer): Promise<Buffer> {
 		try {
 			const [img1Meta, img2Meta] = await Promise.all([
-				sharp(image1Buffer).metadata(),
-				sharp(image2Buffer).metadata()
+				sharp(image1).metadata(),
+				sharp(image2).metadata()
 			]);
 
 			if (!img1Meta.width || !img2Meta.width || !img1Meta.height || !img2Meta.height) {
@@ -134,8 +135,8 @@ export class ImageVideoProcessor {
 				}
 			})
 				.composite([
-					{ input: image1Buffer, left: 0, top: 0 },
-					{ input: image2Buffer, left: 0, top: img1Meta.height }
+					{ input: image1, left: 0, top: 0 },
+					{ input: image2, left: 0, top: img1Meta.height }
 				])
 				.jpeg()
 				.toBuffer();
@@ -147,23 +148,25 @@ export class ImageVideoProcessor {
 		}
 	}
 
-	private async mergeImages(image1Buffer: Buffer, image2Buffer: Buffer): Promise<Buffer> {
-		const direction = await this.determineMergeDirection(image1Buffer, image2Buffer);
+	private async mergeImages(image1: Buffer, image2: Buffer): Promise<Buffer> {
+		const direction = await this.determineMergeDirection(image1, image2);
 		console.log(`Using ${direction} merge strategy`);
 
 		switch (direction) {
 			case MergeDirection.HORIZONTAL:
-				return this.mergeSideBySide(image1Buffer, image2Buffer);
+				return this.mergeSideBySide(image1, image2);
 			case MergeDirection.VERTICAL:
-				return this.mergeTopAndBottom(image1Buffer, image2Buffer);
+				return this.mergeTopAndBottom(image1, image2);
 			default:
 				throw new ImageProcessingError(`Invalid merge direction: ${direction}`);
 		}
 	}
 
 	private createVideoFromImages(inputDir: string): Promise<string> {
-		const output = this.videoOutput;
+		let output = this.videoOutput;
 		assert(output, 'Video output path is required');
+
+		output = join(this.outputDir, output);
 
 		return new Promise((resolve, reject) => {
 			ffmpeg()
@@ -176,10 +179,13 @@ export class ImageVideoProcessor {
 		});
 	}
 
+	/**
+	 * Cleanup the output directory
+	 */
 	private async cleanup(): Promise<void> {
 		try {
 			const files = await fs.readdir(this.outputDir);
-			await Promise.all(files.map((file) => fs.unlink(path.join(this.outputDir, file))));
+			await Promise.all(files.map((file) => fs.unlink(join(this.outputDir, file))));
 			await fs.rmdir(this.outputDir);
 		} catch (error) {
 			console.error('Error during cleanup:', error);
@@ -194,7 +200,7 @@ export class ImageVideoProcessor {
 
 			const mergePromises = imagePairs.map((pair, index) =>
 				this.mergeImages(pair.first, pair.second).then((buffer) => {
-					const outputPath = path.join(this.outputDir, `${index + 1}.jpg`);
+					const outputPath = join(this.outputDir, `${index + 1}.jpg`);
 					return fs.writeFile(outputPath, buffer);
 				})
 			);

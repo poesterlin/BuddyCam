@@ -13,13 +13,12 @@ export const load: PageServerLoad = async (event) => {
 
 	const friends = await db
 		.select({
-			id: friendsTable.id,
-			friend: friendsTable,
+			id: usersTable.id,
 			user: usersTable.username
 		})
 		.from(friendsTable)
 		.where(and(eq(friendsTable.userId, locals.user.id), eq(friendsTable.accepted, true)))
-		.fullJoin(usersTable, eq(friendsTable.userId, usersTable.id))
+		.innerJoin(usersTable, eq(friendsTable.userId, usersTable.id))
 		.orderBy(asc(friendsTable.accepted), desc(usersTable.username));
 
 	const myRequest = await db
@@ -29,7 +28,7 @@ export const load: PageServerLoad = async (event) => {
 			user: usersTable.username
 		})
 		.from(friendsTable)
-		.fullJoin(usersTable, eq(friendsTable.friendId, usersTable.id))
+		.innerJoin(usersTable, eq(friendsTable.friendId, usersTable.id))
 		.where(and(eq(friendsTable.userId, locals.user.id), eq(friendsTable.accepted, false)));
 
 	return { friends, user, myRequest };

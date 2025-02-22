@@ -21,8 +21,6 @@ export const load: PageServerLoad = async (event) => {
 
 	assert(matchup, 404, 'Match not found');
 
-    console.log(matchup);
-
 	const files = await db.select().from(filesTable).where(eq(filesTable.matchupId, match));
 
 	return { files: files.length, matchup };

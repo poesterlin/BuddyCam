@@ -81,6 +81,7 @@ export const actions: Actions = {
 				} satisfies FriendRequestData,
 				createdAt: new Date(),
 				persistent: true,
+				isTechnical: false,
 				read: false
 			} satisfies typeof eventsTable.$inferInsert);
 

@@ -29,6 +29,7 @@ export const load: PageServerLoad = async (event) => {
 				userId: locals.user.id,
 				type: EventType.START,
 				createdAt: new Date(),
+				isTechnical: true,
 				data: { matchId: match } satisfies StartData
 			},
 			{
@@ -36,6 +37,7 @@ export const load: PageServerLoad = async (event) => {
 				userId: matchup.userId,
 				type: EventType.START,
 				createdAt: new Date(),
+				isTechnical: true,
 				data: { matchId: match } satisfies StartData
 			}
 		]);

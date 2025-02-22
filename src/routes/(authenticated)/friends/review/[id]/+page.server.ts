@@ -50,6 +50,7 @@ export const actions: Actions = {
 		const { id } = event.params;
 		assert(id, 400, 'Friend request ID is required');
 
+		// check if the friend request exists
 		const [request] = await db
 			.select()
 			.from(friendsTable)
@@ -58,10 +59,8 @@ export const actions: Actions = {
 
 		assert(request, 400, 'Friend request not found');
 
-		await db
-			.update(friendsTable)
-			.set({ accepted: true })
-			.where(and(eq(friendsTable.userId, id), eq(friendsTable.friendId, locals.user.id)));
+		// accept the friend request
+		await db.update(friendsTable).set({ accepted: true }).where(eq(friendsTable.id, request.id));
 
 		// insert reverse friendship
 		await db.insert(friendsTable).values({
@@ -77,6 +76,7 @@ export const actions: Actions = {
 			id: generateId(),
 			userId: id,
 			type: EventType.FRIEND_REQUEST_ACCEPTED,
+			isTechnical: false,
 			data: {
 				fromId: locals.user.id,
 				fromUsername: locals.user.username

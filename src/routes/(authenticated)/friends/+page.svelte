@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toastStore } from '$lib/client/toast.svelte';
-	import { IconAvocado, IconCancel, IconCopy, IconUserCircle } from '@tabler/icons-svelte';
+	import { IconCancel, IconCopy, IconUserCircle } from '@tabler/icons-svelte';
 	import type { PageServerData } from './$types';
 	import { enhance } from '$app/forms';
 

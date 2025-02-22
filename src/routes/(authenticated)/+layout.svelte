@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { IconBell } from '@tabler/icons-svelte';
 	import DynamicEvent from '$lib/client/events/DynamicEvent.svelte';
+	import { slide } from 'svelte/transition';
 
 	onMount(() => initMessageChannel());
 
@@ -36,7 +37,7 @@
 		<div class="mx-auto max-w-7xl px-4">
 			<div class="flex h-16 justify-between">
 				<div class="flex items-center">
-					<a href="/" class="text-2xl font-bold text-pink-500">FriendZone</a>
+					<a href="/" class="text-2xl font-bold text-pink-500">BuddyCam</a>
 				</div>
 				<div class="flex items-center gap-6">
 					{#if !page.data.user}
@@ -46,7 +47,7 @@
 						<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
 							<IconBell></IconBell>
 							{#if events.new.length > 0}
-								<span class="badge">{events.new.length}</span>
+								<span class="badge">{events.count}</span>
 							{/if}
 						</button>
 
@@ -64,13 +65,18 @@
 	<main>
 		{@render children()}
 
-		{#each toastStore.toasts as toast (toast.id)}
-			<div class="fixed right-4 bottom-4">
+		{#each toastStore.toasts as toast, i (toast.id)}
+			<div
+				class="fixed right-4 bottom-4 z-50"
+				in:slide={{ duration: 300 }}
+				out:slide={{ duration: 300 }}
+				style="translate: 0 {i * -4}rem;"
+			>
 				<div
-					class="rounded-md border-l-4 border-indigo-600 bg-white p-4 text-black shadow-md"
+					class="animate-slide-in rounded-xl border-l-4 border-rose-400 bg-pink-50 p-4 text-gray-700 shadow-lg"
 					style="min-width: 300px"
 				>
-					<p class="font-medium">{toast.message}</p>
+					<p class="text-sm font-semibold">{toast.message}</p>
 				</div>
 			</div>
 		{/each}
