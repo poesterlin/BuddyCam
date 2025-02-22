@@ -5,8 +5,8 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tex.rule=Host(`${HOST_DOMAIN}`) || HOST(`cam.homelab`)"
-      - "traefik.http.services.tex.loadbalancer.server.port=3000"
+      - "traefik.http.routers.rtcam.rule=Host(`${HOST_DOMAIN}`) || HOST(`cam.homelab`)"
+      - "traefik.http.services.rtcam.loadbalancer.server.port=3000"
     networks:
       - traefik_web
 
