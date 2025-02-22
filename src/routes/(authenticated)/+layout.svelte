@@ -5,7 +5,7 @@
 	import Modal from '$lib/client/Modal.svelte';
 	import { toastStore } from '$lib/client/toast.svelte';
 	import { onMount } from 'svelte';
-	import { IconBell } from '@tabler/icons-svelte';
+	import { IconBell, IconUserCircle } from '@tabler/icons-svelte';
 	import DynamicEvent from '$lib/client/events/DynamicEvent.svelte';
 	import { slide } from 'svelte/transition';
 
@@ -40,23 +40,18 @@
 					<a href="/" class="text-2xl font-bold text-pink-500">BuddyCam</a>
 				</div>
 				<div class="flex items-center gap-6">
-					{#if !page.data.user}
-						<a href="/login" class="btn btn-primary btn-sm">Login</a>
-						<a href="/register" class="btn btn-secondary btn-sm">Register</a>
-					{:else}
-						<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
-							<IconBell></IconBell>
-							{#if events.count > 0}
-								<span class="badge">{events.count}</span>
-							{/if}
-						</button>
+					<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
+						<IconBell></IconBell>
+						{#if events.count > 0}
+							<span class="badge">{events.count}</span>
+						{/if}
+					</button>
 
-						<a href="/friends" class="btn btn-ghost btn-sm">Friends</a>
+					<a href="/friends" class="btn btn-ghost btn-sm">Friends</a>
 
-						<form action="/logout" method="POST">
-							<button type="submit" class="btn btn-outline btn-sm">Logout</button>
-						</form>
-					{/if}
+					<a href="/profile">
+						<IconUserCircle class="text-rose-500"></IconUserCircle>
+					</a>
 				</div>
 			</div>
 		</div>
@@ -84,6 +79,10 @@
 </div>
 
 <style>
+	nav {
+		view-transition-name: header;
+	}
+
 	.badge {
 		position: absolute;
 		top: -0.6rem;

@@ -1,13 +1,12 @@
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { generateId, validateForm, validatePassword, validateUsername } from '$lib/server/util';
+import { validateForm, validatePassword, validateUsername } from '$lib/server/util';
 import { verify } from '@node-rs/argon2';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { z } from 'zod';
-import { EventType } from '$lib/events';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -69,15 +68,6 @@ export const actions: Actions = {
 			const sessionToken = auth.generateSessionToken();
 			const session = await auth.createSession(sessionToken, existingUser.id);
 			auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
-
-			await db.insert(table.eventsTable).values({
-				id: generateId(),
-				userId: existingUser.id,
-				type: EventType.LOGIN,
-				data: null,
-				sendAt: null,
-				createdAt: new Date()
-			} as any);
 
 			await db
 				.update(table.usersTable)
