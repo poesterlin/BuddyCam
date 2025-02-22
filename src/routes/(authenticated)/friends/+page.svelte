@@ -1,0 +1,83 @@
+<script lang="ts">
+	import { toastStore } from '$lib/client/toast.svelte';
+	import { IconAvocado, IconCancel, IconCopy, IconUserCircle } from '@tabler/icons-svelte';
+	import type { PageServerData } from './$types';
+	import { enhance } from '$app/forms';
+
+	let { data }: { data: PageServerData } = $props();
+
+	function copyFriendLink() {
+		const url = window.location.origin + '/friends/request?id=' + data.user.id;
+		navigator.clipboard.writeText(url.toString());
+
+		toastStore.show('Copied friend link to clipboard!');
+	}
+</script>
+
+<div class="relative m-auto mt-12 w-max rounded-lg bg-white p-3 shadow-md">
+	<img src="/qrcode" alt="Friend Link QR-Code" />
+
+	<button
+		onclick={copyFriendLink}
+		class="absolute bottom-4 right-4 rounded-lg bg-white p-2 shadow-md"
+	>
+		<IconCopy class="text-purple-900"></IconCopy>
+	</button>
+</div>
+<h2 class="mt-4 text-center text-lg text-rose-600">Share this link with your friends!</h2>
+
+{#if data.friends.length > 0}
+	<h1 class="mt-12 text-center text-3xl font-semibold text-rose-500">Your Friends</h1>
+{/if}
+
+<ul class="m-auto mt-8 max-w-xl space-y-3">
+	{#each data.friends as friend}
+		<li
+			class="flex items-center rounded-xl bg-yellow-50 px-3 py-2 shadow-sm transition-shadow duration-200 hover:shadow-md"
+		>
+			{#if friend.friend?.accepted}
+				<img
+					src="/avatar/{friend.user}"
+					alt="{friend.user}'s avatar"
+					class="mr-2 h-8 w-8 rounded-full object-cover"
+				/>
+			{:else}
+				<IconUserCircle class="mr-2 h-8 w-8 text-amber-300"></IconUserCircle>
+			{/if}
+
+			<span class="flex-grow font-bold text-amber-600">
+				{friend.user}
+			</span>
+
+			<span class="flex items-center text-sm text-green-600">
+				<span class="mr-1">Friends!</span>
+				<span aria-label="Heart Eyes" role="img">🥰</span>
+			</span>
+		</li>
+	{/each}
+</ul>
+
+{#if data.myRequest.length > 0}
+	<h3 class="mt-12 text-center text-3xl font-semibold text-rose-500">Your Open Request</h3>
+{/if}
+<ul class="m-auto mt-8 max-w-xl space-y-3">
+	{#each data.myRequest as request}
+		<li
+			class="flex items-center justify-between rounded-xl bg-yellow-50 px-3 py-2 shadow-sm transition-shadow duration-200 hover:shadow-md"
+		>
+			<p>{request.user}</p>
+
+			<span class="flex items-center text-sm italic text-gray-500">
+				<span class="mr-1">Waiting...</span>
+				<span aria-label="Pleading Face" role="img">🥺</span>
+			</span>
+
+			<form action="?/del" method="POST" use:enhance>
+				<input type="hidden" name="id" value={request.id} />
+				<button type="submit" class="rounded-full bg-white p-2 shadow-md">
+					<IconCancel class="text-red-500"></IconCancel>
+				</button>
+			</form>
+		</li>
+	{/each}
+</ul>

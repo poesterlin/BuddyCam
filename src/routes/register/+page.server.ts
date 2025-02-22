@@ -1,0 +1,66 @@
+import * as auth from '$lib/server/auth';
+import { db } from '$lib/server/db';
+import * as table from '$lib/server/db/schema';
+import { generateId, validateForm, validatePassword, validateUsername } from '$lib/server/util';
+import { hash } from '@node-rs/argon2';
+import { fail, redirect } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
+import { z } from 'zod';
+import { EventType } from '$lib/events';
+
+export const load: PageServerLoad = async (event) => {
+	if (event.locals.user) {
+		return redirect(302, '/');
+	}
+
+	return {};
+};
+
+export const actions: Actions = {
+	register: validateForm(
+		z.object({
+			username: z.string(),
+			password: z.string()
+		}),
+		async (event, form) => {
+			const { username, password } = form;
+
+			if (!validateUsername(username)) {
+				return fail(400, { message: 'Invalid username' });
+			}
+			if (!validatePassword(password)) {
+				return fail(400, { message: 'Invalid password' });
+			}
+
+			const userId = generateId();
+			const passwordHash = await hash(password, {
+				// recommended minimum parameters
+				memoryCost: 19456,
+				timeCost: 2,
+				outputLen: 32,
+				parallelism: 1
+			});
+
+			try {
+				await db.insert(table.usersTable).values({ id: userId, username, passwordHash });
+
+				const sessionToken = auth.generateSessionToken();
+				const session = await auth.createSession(sessionToken, userId);
+				auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
+			} catch {
+				return fail(500, { message: 'An error has occurred' });
+			}
+
+			await db.insert(table.eventsTable).values({
+				id: generateId(),
+				userId: userId,
+				type: EventType.REGISTER,
+				data: null,
+				sendAt: null,
+				createdAt: new Date()
+			} as any);
+
+			return redirect(302, '/');
+		}
+	)
+};
