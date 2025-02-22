@@ -14,7 +14,6 @@
 		const e = events.new.find(({ event }) => matching.includes(event.type));
 		if (e) {
 			invalidate(({ pathname }) => pathname === '/friends');
-			e.clear();
 		}
 	});
 
