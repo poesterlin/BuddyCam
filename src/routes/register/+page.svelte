@@ -69,6 +69,7 @@
 
 	.card {
 		view-transition-name: login-card;
+		max-width: 95vw;
 	}
 
 	.background {
