@@ -59,7 +59,11 @@ export function initMessageChannel() {
 				return;
 			}
 
-			toastStore.show('New Notifications Received');
+			const includesNonTechnical = hydrated.some(({ event }) => !event.isTechnical);
+			if (includesNonTechnical) {
+				toastStore.show('New Notification Received!');
+			}
+
 			events.new.push(...hydrated);
 		} catch (error) {
 			console.error(error);

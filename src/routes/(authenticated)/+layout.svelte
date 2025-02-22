@@ -13,12 +13,6 @@
 
 	let { children } = $props();
 
-	$effect(() => {
-		if (page.state.showNotifications && events.new.length === 0) {
-			closeModal();
-		}
-	});
-
 	function showModal() {
 		pushState('', { showNotifications: true });
 	}
@@ -52,14 +46,12 @@
 					>
 				</div>
 				<div class="flex items-center gap-6">
-					{#if events.count > 0}
-						<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
-							<IconBell class="text-amber-400"></IconBell>
-							{#if events.count > 0}
-								<span class="badge">{events.count}</span>
-							{/if}
-						</button>
-					{/if}
+					<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
+						<IconBell class="text-amber-400"></IconBell>
+						{#if events.count > 0}
+							<span class="badge">{events.count}</span>
+						{/if}
+					</button>
 
 					<a
 						href="/friends"
