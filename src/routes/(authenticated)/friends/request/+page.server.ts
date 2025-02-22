@@ -1,4 +1,4 @@
-import { EventType, type FriendRequestData } from '$lib/events';
+import { EventType, type FriendRequestAcceptedData, type FriendRequestData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
 import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
@@ -60,6 +60,77 @@ export const actions: Actions = {
 				.limit(1);
 
 			assert(targetedUser, 400, 'User not found');
+
+			// check if they are already friends
+			const [existingFriendship] = await db
+				.select()
+				.from(friendsTable)
+				.where(
+					and(eq(friendsTable.userId, locals.user.id), eq(friendsTable.friendId, targetedUser.id))
+				)
+				.limit(1);
+
+			if (existingFriendship) {
+				redirect(302, '/friends');
+			}
+
+			// check if there is already a friend request in the other direction
+			const [existingFriendRequest] = await db
+				.select()
+				.from(friendsTable)
+				.where(
+					and(eq(friendsTable.userId, targetedUser.id), eq(friendsTable.friendId, locals.user.id))
+				)
+				.limit(1);
+
+			// if there is a friend request, connect the users as friends
+			if (existingFriendRequest) {
+				await db
+					.update(friendsTable)
+					.set({ accepted: true })
+					.where(eq(friendsTable.id, existingFriendRequest.id));
+
+				// insert reverse friendship
+				await db.insert(friendsTable).values({
+					id: generateId(),
+					userId: locals.user.id,
+					friendId: targetedUser.id,
+					accepted: true,
+					createdAt: new Date()
+				});
+
+				// notify both users
+				await db.insert(eventsTable).values([
+					{
+						id: generateId(),
+						userId: targetedUser.id,
+						type: EventType.FRIEND_REQUEST_ACCEPTED,
+						data: {
+							fromId: locals.user.id,
+							fromUsername: locals.user.username
+						} satisfies FriendRequestAcceptedData,
+						createdAt: new Date(),
+						persistent: false,
+						isTechnical: false,
+						read: false
+					} satisfies typeof eventsTable.$inferInsert,
+					{
+						id: generateId(),
+						userId: locals.user.id,
+						type: EventType.FRIEND_REQUEST_ACCEPTED,
+						data: {
+							fromId: targetedUser.id,
+							fromUsername: targetedUser.username
+						} satisfies FriendRequestAcceptedData,
+						createdAt: new Date(),
+						persistent: false,
+						isTechnical: false,
+						read: false
+					} satisfies typeof eventsTable.$inferInsert
+				]);
+
+				redirect(302, '/friends');
+			}
 
 			// add friend request
 			await db.insert(friendsTable).values({
