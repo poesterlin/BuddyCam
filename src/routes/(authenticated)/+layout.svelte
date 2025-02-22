@@ -13,13 +13,23 @@
 
 	let { children } = $props();
 
+	$effect(() => {
+		if (page.state.showNotifications && events.new.length === 0) {
+			closeModal();
+		}
+	});
+
 	function showModal() {
 		pushState('', { showNotifications: true });
+	}
+
+	function closeModal() {
+		history.back();
 	}
 </script>
 
 {#if page.state.showNotifications}
-	<Modal title="Notifications" close={() => history.back()}>
+	<Modal title="Notifications" close={closeModal}>
 		<div class="p-4">
 			<ul class="mt-4 space-y-4">
 				{#each events.new as { event, clear }}
@@ -35,22 +45,32 @@
 <div class="app-grid bg-gradient-to-br from-pink-100 to-purple-100">
 	<nav class="bg-white shadow-lg">
 		<div class="mx-auto max-w-7xl px-4">
-			<div class="flex h-16 justify-between">
+			<div class="flex h-18 justify-between">
 				<div class="flex items-center">
-					<a href="/" class="text-2xl font-bold text-pink-500">BuddyCam</a>
+					<a
+						href="/"
+						class="text-2xl font-bold text-pink-500"
+						aria-current={page.url.pathname === '/'}>BuddyCam</a
+					>
 				</div>
 				<div class="flex items-center gap-6">
-					<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
-						<IconBell></IconBell>
-						{#if events.count > 0}
-							<span class="badge">{events.count}</span>
-						{/if}
-					</button>
+					{#if events.count > 0}
+						<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
+							<IconBell class="text-amber-400"></IconBell>
+							{#if events.count > 0}
+								<span class="badge">{events.count}</span>
+							{/if}
+						</button>
+					{/if}
 
-					<a href="/friends" class="btn btn-ghost btn-sm">Friends</a>
+					<a
+						href="/friends"
+						class="btn btn-ghost btn-sm text-lg font-semibold text-amber-500"
+						aria-current={page.url.pathname === '/friends'}>Friends</a
+					>
 
-					<a href="/profile">
-						<IconUserCircle class="text-rose-500"></IconUserCircle>
+					<a href="/profile" aria-current={page.url.pathname === '/profile'} class="text-rose-500">
+						<IconUserCircle class="m-auto h-8 w-8 -translate-y-0.5"></IconUserCircle>
 					</a>
 				</div>
 			</div>
@@ -100,6 +120,35 @@
 	.app-grid {
 		display: grid;
 		grid-template-rows: auto 1fr;
-		height: 100svh;
+		height: 99.6svh;
+	}
+
+	a {
+		position: relative;
+		min-width: 3rem;
+	}
+
+	a[aria-current='true']::after {
+		position: absolute;
+		content: '✨';
+		--col: currentColor;
+		background: linear-gradient(
+			90deg,
+			var(--col) 0%,
+			var(--col) calc(100% - 1.5rem),
+			transparent calc(100% - 1rem),
+			transparent 100%
+		);
+		bottom: -0.3rem;
+		left: calc(70% - 0.5rem);
+		display: flex;
+		transform: translateX(-50%);
+		width: 100%;
+		direction: rtl;
+		line-height: 0.3rem;
+		height: 0.2rem;
+		font-size: 0.7rem;
+		border-radius: 0.25rem;
+		view-transition-name: active-link;
 	}
 </style>

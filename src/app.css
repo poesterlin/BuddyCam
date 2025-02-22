@@ -3,6 +3,7 @@
 
 body {
     font-family: 'Bubblegum Sans', cursive;
+    letter-spacing: var(--tracking-wide);
 }
 
 button {
