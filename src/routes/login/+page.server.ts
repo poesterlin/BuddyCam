@@ -29,11 +29,15 @@ export const actions: Actions = {
 
 			if (!validateUsername(username)) {
 				return fail(400, {
-					message: 'Oopsie! It looks like your username needs a little more love. Please try again! 😊'
+					message:
+						'Oopsie! It looks like your username needs a little more love. Please try again! 😊'
 				});
 			}
 			if (!validatePassword(password)) {
-				return fail(400, { message: 'Oopsie! It looks like your password needs a little more love. Please try again! 😊' });
+				return fail(400, {
+					message:
+						'Oopsie! It looks like your password needs a little more love. Please try again! 😊'
+				});
 			}
 
 			const results = await db
@@ -43,7 +47,10 @@ export const actions: Actions = {
 
 			const existingUser = results.at(0);
 			if (!existingUser) {
-				return fail(400, { message: 'Oh no! We couldn\'t find that username or password. Please double-check and try again! 🌟' });
+				return fail(400, {
+					message:
+						"Oh no! We couldn't find that username or password. Please double-check and try again! 🌟"
+				});
 			}
 
 			const validPassword = await verify(existingUser.passwordHash, password, {
@@ -53,7 +60,10 @@ export const actions: Actions = {
 				parallelism: 1
 			});
 			if (!validPassword) {
-				return fail(400, { message: 'Oh no! We couldn\'t find that username or password. Please double-check and try again! 🌟' });
+				return fail(400, {
+					message:
+						"Oh no! We couldn't find that username or password. Please double-check and try again! 🌟"
+				});
 			}
 
 			const sessionToken = auth.generateSessionToken();
@@ -68,6 +78,11 @@ export const actions: Actions = {
 				sendAt: null,
 				createdAt: new Date()
 			} as any);
+
+			await db
+				.update(table.usersTable)
+				.set({ lastLogin: new Date() })
+				.where(eq(table.usersTable.id, existingUser.id));
 
 			let to = '/';
 			const redirectUrl = 'http://t' + form.redirect;

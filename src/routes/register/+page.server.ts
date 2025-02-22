@@ -21,16 +21,23 @@ export const actions: Actions = {
 		z.object({
 			username: z.string(),
 			password: z.string(),
+			email: z.string().optional(),
 			redirect: z.string().optional()
 		}),
 		async (event, form) => {
 			const { username, password } = form;
 
 			if (!validateUsername(username)) {
-				return fail(400, { message: 'Oopsie! It looks like your username needs a little more love. Please try again! 😊' });
+				return fail(400, {
+					message:
+						'Oopsie! It looks like your username needs a little more love. Please try again! 😊'
+				});
 			}
 			if (!validatePassword(password)) {
-				return fail(400, { message: 'Oopsie! It looks like your password needs a little more love. Please try again! 😊' });
+				return fail(400, {
+					message:
+						'Oopsie! It looks like your password needs a little more love. Please try again! 😊'
+				});
 			}
 
 			const userId = generateId();
@@ -43,13 +50,23 @@ export const actions: Actions = {
 			});
 
 			try {
-				await db.insert(table.usersTable).values({ id: userId, username, passwordHash });
+				await db.insert(table.usersTable).values({
+					id: userId,
+					email: null,
+					createdAt: new Date(),
+					lastLogin: new Date(),
+
+					username,
+					passwordHash
+				});
 
 				const sessionToken = auth.generateSessionToken();
 				const session = await auth.createSession(sessionToken, userId);
 				auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 			} catch {
-				return fail(500, { message: 'Oopsie! It looks like something went wrong. Please try again! 😊' });
+				return fail(500, {
+					message: 'Oopsie! It looks like something went wrong. Please try again! 😊'
+				});
 			}
 
 			await db.insert(table.eventsTable).values({

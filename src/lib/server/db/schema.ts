@@ -1,18 +1,12 @@
-import { read } from '$app/server';
-import {
-	boolean,
-	index,
-	integer,
-	json,
-	pgTable,
-	text,
-	timestamp,
-	unique
-} from 'drizzle-orm/pg-core';
+import { boolean, index, json, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
+
+const fullCascade = { onDelete: 'cascade', onUpdate: 'cascade' } as const;
 
 export const usersTable = pgTable('user', {
 	id: text('id').primaryKey(),
-	age: integer('age'),
+	email: text('email').unique(),
+	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+	lastLogin: timestamp('last_login', { withTimezone: true, mode: 'date' }),
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull()
 });
@@ -23,7 +17,7 @@ export const sessionTable = pgTable('session', {
 	id: text('id').primaryKey(),
 	userId: text('user_id')
 		.notNull()
-		.references(() => usersTable.id),
+		.references(() => usersTable.id, fullCascade),
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull()
 });
 
@@ -35,10 +29,10 @@ export const friendsTable = pgTable(
 		id: text('id').primaryKey(),
 		userId: text('user_id')
 			.notNull()
-			.references(() => usersTable.id),
+			.references(() => usersTable.id, fullCascade),
 		friendId: text('friend_id')
 			.notNull()
-			.references(() => usersTable.id),
+			.references(() => usersTable.id, fullCascade),
 		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
 		accepted: boolean('accepted').notNull().default(false)
 	},
@@ -53,7 +47,7 @@ export const eventsTable = pgTable(
 		id: text('id').primaryKey(),
 		userId: text('user_id')
 			.notNull()
-			.references(() => usersTable.id),
+			.references(() => usersTable.id, fullCascade),
 		type: text('type').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
 		sendAt: timestamp('send_at', { withTimezone: true, mode: 'date' }),
@@ -69,24 +63,24 @@ export type Event = typeof eventsTable.$inferSelect;
 
 export const matchupTable = pgTable('matchup', {
 	id: text('id').primaryKey(),
+	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
 	userId: text('user_id')
 		.notNull()
-		.references(() => usersTable.id),
-	friendId: text('opponent_id').references(() => usersTable.id),
-	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull()
+		.references(() => usersTable.id, fullCascade),
+	friendId: text('opponent_id').references(() => usersTable.id, fullCascade)
 });
 
 export type Matchup = typeof matchupTable.$inferSelect;
 
 export const filesTable = pgTable('file', {
 	id: text('id').primaryKey(),
+	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
 	userId: text('user_id')
 		.notNull()
-		.references(() => usersTable.id),
-	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+		.references(() => usersTable.id, fullCascade),
 	matchupId: text('matchup_id')
 		.notNull()
-		.references(() => matchupTable.id)
+		.references(() => matchupTable.id, fullCascade)
 });
 
 export type File = typeof filesTable.$inferSelect;

@@ -42,6 +42,19 @@
 					/>
 				</div>
 
+				<div>
+					<label for="email" class="mb-2 block text-sm font-bold text-gray-700">
+						Email, if you want to share it
+					</label>
+					<input
+						type="email"
+						id="email"
+						name="email"
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+						placeholder="Optional"
+					/>
+				</div>
+
 				{#if form?.message}
 					<p class="text-center text-sm text-balance text-rose-500" transition:fade>
 						{form.message}

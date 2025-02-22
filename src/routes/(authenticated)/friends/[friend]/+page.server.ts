@@ -20,30 +20,30 @@ export const load: PageServerLoad = async (event) => {
 	assert(friend, 404, 'Friend not found');
 
 	// TODO: this is not working
-	// const [friendship] = await db
-	// 	.select()
-	// 	.from(friendsTable)
-	// 	.where(
-	// 		and(
-	// 			eq(friendsTable.userId, locals.user.id),
-	// 			eq(friendsTable.friendId, friendId),
-	// 			eq(friendsTable.accepted, true)
-	// 		)
-	// 	)
-	// 	.limit(1);
+	const [friendship] = await db
+		.select()
+		.from(friendsTable)
+		.where(
+			and(
+				eq(friendsTable.userId, locals.user.id),
+				eq(friendsTable.friendId, friendId),
+				eq(friendsTable.accepted, true)
+			)
+		)
+		.limit(1);
 
-	// assert(friendship, 404, 'Friendship not found');
+	assert(friendship, 404, 'Friendship not found');
 
 	// TODO: this is not working
 	const matchups = await db
 		.select()
 		.from(matchupTable)
-		// .where(
-		// 	or(
-		// 		and(eq(matchupTable.userId, locals.user.id), eq(matchupTable.friendId, friendId)),
-		// 		and(eq(matchupTable.friendId, locals.user.id), eq(matchupTable.userId, friendId))
-		// 	)
-		// )
+		.where(
+			or(
+				and(eq(matchupTable.userId, locals.user.id), eq(matchupTable.friendId, friendId)),
+				and(eq(matchupTable.friendId, locals.user.id), eq(matchupTable.userId, friendId))
+			)
+		)
 		.orderBy(matchupTable.createdAt);
 
 	return { matchups: matchups.length, friend: friend };
