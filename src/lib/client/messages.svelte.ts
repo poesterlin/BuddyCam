@@ -2,6 +2,7 @@ import { goto } from '$app/navigation';
 import { EventType, type StartData } from '$lib/events';
 import type { Event } from '$lib/server/db/schema';
 import { source } from 'sveltekit-sse';
+import { toastStore } from './toast.svelte';
 
 // state rune to store new events
 const newEvents = $state<{ event: Event; clear: () => void }[]>([]);
@@ -54,6 +55,11 @@ export function initMessageChannel() {
 				startEvents.forEach((e) => e.clear());
 			}
 
+			if (hydrated.length === 0) {
+				return;
+			}
+
+			toastStore.show('New Notifications Received');
 			events.new.push(...hydrated);
 		} catch (error) {
 			console.error(error);
