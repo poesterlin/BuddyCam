@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { IconX } from '@tabler/icons-svelte';
 	import { fade, fly } from 'svelte/transition';
+	import { quintIn } from 'svelte/easing';
 
 	let dialogEl: HTMLDialogElement;
 
@@ -26,8 +27,8 @@
 	bind:this={dialogEl}
 	class="m-auto w-lg rounded-2xl bg-white"
 	onclick={onlySelf(close)}
-	in:fly={{ duration: 300, y: 400 }}
-	out:fly={{ duration: 300, x: -400 }}
+	in:fly={{ duration: 350, y: -400, easing: quintIn }}
+	out:fly={{ duration: 250, y: -400, easing: quintIn }}
 >
 	<form method="dialog" onsubmit={close} class="relative overflow-hidden px-6 py-4">
 		<h1 class="text-lg font-bold text-rose-600">{title}</h1>
