@@ -55,7 +55,7 @@
 
 					<a
 						href="/friends"
-						class="btn btn-ghost btn-sm text-lg font-semibold text-amber-500"
+						class="btn btn-ghost btn-sm text-lg text-amber-500"
 						aria-current={page.url.pathname === '/friends'}>Friends</a
 					>
 
@@ -67,7 +67,7 @@
 		</div>
 	</nav>
 
-	<main>
+	<main class="px-4">
 		{@render children()}
 
 		{#each toastStore.toasts as toast, i (toast.id)}

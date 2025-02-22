@@ -9,7 +9,7 @@
 </script>
 
 <a href="/friends" onclick={clear}>
-	<BaseEvent {clear}>
-		{data.username} accepted your friend request
+	<BaseEvent {clear} {event}>
+		{data.fromUsername} accepted your friend request
 	</BaseEvent>
 </a>

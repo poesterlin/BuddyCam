@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FriendRequestData } from '$lib/events';
+	import type { FriendRequestData, ReadyRequestData } from '$lib/events';
 	import type { Event } from '$lib/server/db/schema';
 	import BaseEvent from './BaseEvent.svelte';
 
@@ -9,7 +9,7 @@
 </script>
 
 <a href="/cam/waiting-room/{data.matchId}">
-	<BaseEvent {clear}>
+	<BaseEvent {clear} {event}>
 		{data.fromUsername} is ready!
 	</BaseEvent>
 </a>

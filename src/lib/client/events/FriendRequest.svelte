@@ -9,7 +9,7 @@
 </script>
 
 <a href="/friends/review/{data.fromId}">
-	<BaseEvent {clear}>
+	<BaseEvent {clear} {event}>
 		{data.fromUsername} wants to be your friend
 	</BaseEvent>
 </a>

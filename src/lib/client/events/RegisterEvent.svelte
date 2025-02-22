@@ -2,7 +2,7 @@
 	import type { Event } from '$lib/server/db/schema';
 	import BaseEvent from './BaseEvent.svelte';
 
-	let { clear }: { event: Event; clear: () => void } = $props();
+	let { clear, event }: { event: Event; clear: () => void } = $props();
 </script>
 
-<BaseEvent {clear}>Thank you for registering!</BaseEvent>
+<BaseEvent {clear} {event}>Thank you for registering!</BaseEvent>

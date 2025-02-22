@@ -1,13 +1,11 @@
-import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
+import { EventType, type FriendRequestAcceptedData } from '$lib/events';
+import { db } from '$lib/server/db';
+import { eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
+import { assert, generateId, validateAuth } from '$lib/server/util';
+import { redirect } from '@sveltejs/kit';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { eventsTable, friendsTable } from '$lib/server/db/schema';
-import { and, eq } from 'drizzle-orm';
-import { error } from '@sveltejs/kit';
-import { redirect } from '@sveltejs/kit';
-import { EventType, type FriendRequestAcceptedData } from '$lib/events';
-import { sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -16,7 +14,10 @@ export const load: PageServerLoad = async (event) => {
 	const targetUserID = z.string().parse(params.id);
 
 	const [targetedUser] = await db
-		.select()
+		.select({
+			id: usersTable.id,
+			username: usersTable.username
+		})
 		.from(friendsTable)
 		.where(
 			and(
@@ -25,6 +26,7 @@ export const load: PageServerLoad = async (event) => {
 				eq(friendsTable.friendId, locals.user.id)
 			)
 		)
+		.innerJoin(usersTable, eq(friendsTable.userId, usersTable.id))
 		.limit(1);
 
 	// TODO: implement blocking users
