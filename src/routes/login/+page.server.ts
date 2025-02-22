@@ -21,7 +21,8 @@ export const actions: Actions = {
 	login: validateForm(
 		z.object({
 			username: z.string(),
-			password: z.string()
+			password: z.string(),
+			redirect: z.string().optional()
 		}),
 		async (event, form) => {
 			const { username, password } = form;
@@ -68,8 +69,14 @@ export const actions: Actions = {
 				createdAt: new Date()
 			} as any);
 
-			const redirectUrl = event.url.searchParams.get('redirect') || '/';
-			return redirect(302, redirectUrl);
+			let to = '/';
+			const redirectUrl = 'http://t' + form.redirect;
+			try {
+				const url = new URL(redirectUrl);
+				to = url.searchParams.get('redirect') || '/';
+			} catch {}
+
+			return redirect(302, to);
 		}
 	)
 };

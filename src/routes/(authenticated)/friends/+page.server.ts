@@ -1,9 +1,10 @@
 import { db } from '$lib/server/db';
-import { friendsTable, usersTable } from '$lib/server/db/schema';
-import { validateAuth, validateForm } from '$lib/server/util';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
+import { assert, validateAuth, validateForm } from '$lib/server/util';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { z } from 'zod';
+import { EventType } from '$lib/events';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -65,10 +66,27 @@ export const actions: Actions = {
 		async (event, form) => {
 			const locals = validateAuth(event);
 
+			const [request] = await db
+				.select()
+				.from(friendsTable)
+				.where(and(eq(friendsTable.id, form.id), eq(friendsTable.userId, locals.user.id)))
+				.limit(1);
+
+			assert(request, 400, 'Friend request not found');
+
 			// delete friend request
+			await db.delete(friendsTable).where(eq(friendsTable.id, form.id));
+
+			// delete persistent event
 			await db
-				.delete(friendsTable)
-				.where(and(eq(friendsTable.id, form.id), eq(friendsTable.friendId, locals.user.id)));
+				.delete(eventsTable)
+				.where(
+					and(
+						eq(eventsTable.userId, request.friendId),
+						eq(eventsTable.type, EventType.FRIEND_REQUEST),
+						sql`data->>'userId' = ${locals.user.id}`
+					)
+				);
 		}
 	)
 };

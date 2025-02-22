@@ -3,5 +3,25 @@ export enum EventType {
 	FRIEND_REQUEST_ACCEPTED = 'FRIEND_REQUEST_ACCEPTED',
 	LOGIN = 'LOGIN',
 	REGISTER = 'REGISTER',
-	READY = 'READY'
+	READY = 'READY',
+    START = "START",
+	CAPTURE = 'CAPTURE',
+	UPLOAD = "UPLOAD",
 }
+
+export interface FriendRequestData {
+	fromUsername: string;
+	fromId: string;
+}
+
+export type FriendRequestAcceptedData = FriendRequestData;
+export interface ReadyRequestData extends FriendRequestData {
+	matchId: string;
+}
+
+export interface StartData {
+	matchId: string;
+}
+
+export type CaptureData = StartData;
+export type UploadData = StartData;

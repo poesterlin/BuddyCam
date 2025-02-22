@@ -1,4 +1,4 @@
-import { EventType } from '$lib/events';
+import { EventType, type FriendRequestData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
 import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
@@ -75,8 +75,13 @@ export const actions: Actions = {
 				id: generateId(),
 				userId: targetedUser.id,
 				type: EventType.FRIEND_REQUEST,
-				data: { userId: locals.user.id },
-				createdAt: new Date()
+				data: {
+					fromId: locals.user.id,
+					fromUsername: locals.user.username
+				} satisfies FriendRequestData,
+				createdAt: new Date(),
+				persistent: true,
+				read: false
 			} satisfies typeof eventsTable.$inferInsert);
 
 			redirect(302, '/friends');

@@ -6,16 +6,14 @@
 	import { toastStore } from '$lib/client/toast.svelte';
 	import { onMount } from 'svelte';
 	import { IconBell } from '@tabler/icons-svelte';
-	import Notification from '$lib/client/Notification.svelte';
+	import DynamicEvent from '$lib/client/events/DynamicEvent.svelte';
 
 	onMount(() => initMessageChannel());
 
 	let { children } = $props();
 
 	function showModal() {
-		pushState('', {
-			showNotifications: true
-		});
+		pushState('', { showNotifications: true });
 	}
 </script>
 
@@ -23,8 +21,8 @@
 	<Modal title="Notifications" close={() => history.back()}>
 		<div class="p-4">
 			<ul class="mt-4 space-y-4">
-				{#each events.new as notification}
-					<Notification {...notification}></Notification>
+				{#each events.new as { event, clear }}
+					<DynamicEvent {event} {clear}></DynamicEvent>
 				{:else}
 					<p class="text-gray-500">No new notifications</p>
 				{/each}
@@ -67,7 +65,7 @@
 		{@render children()}
 
 		{#each toastStore.toasts as toast (toast.id)}
-			<div class="fixed bottom-4 right-4">
+			<div class="fixed right-4 bottom-4">
 				<div
 					class="rounded-md border-l-4 border-indigo-600 bg-white p-4 text-black shadow-md"
 					style="min-width: 300px"

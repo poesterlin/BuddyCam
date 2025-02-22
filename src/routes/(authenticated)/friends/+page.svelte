@@ -19,7 +19,7 @@
 
 	<button
 		onclick={copyFriendLink}
-		class="absolute bottom-4 right-4 rounded-lg bg-white p-2 shadow-md"
+		class="absolute right-4 bottom-4 rounded-lg bg-white p-2 shadow-md"
 	>
 		<IconCopy class="text-purple-900"></IconCopy>
 	</button>
@@ -32,18 +32,11 @@
 
 <ul class="m-auto mt-8 max-w-xl space-y-3">
 	{#each data.friends as friend}
-		<li
+		<a
+			href="/friends/{friend.id}"
 			class="flex items-center rounded-xl bg-yellow-50 px-3 py-2 shadow-sm transition-shadow duration-200 hover:shadow-md"
 		>
-			{#if friend.friend?.accepted}
-				<img
-					src="/avatar/{friend.user}"
-					alt="{friend.user}'s avatar"
-					class="mr-2 h-8 w-8 rounded-full object-cover"
-				/>
-			{:else}
-				<IconUserCircle class="mr-2 h-8 w-8 text-amber-300"></IconUserCircle>
-			{/if}
+			<IconUserCircle class="mr-2 h-8 w-8 text-amber-300"></IconUserCircle>
 
 			<span class="flex-grow font-bold text-amber-600">
 				{friend.user}
@@ -53,7 +46,7 @@
 				<span class="mr-1">Friends!</span>
 				<span aria-label="Heart Eyes" role="img">🥰</span>
 			</span>
-		</li>
+		</a>
 	{/each}
 </ul>
 
@@ -67,7 +60,7 @@
 		>
 			<p>{request.user}</p>
 
-			<span class="flex items-center text-sm italic text-gray-500">
+			<span class="flex items-center text-sm text-gray-500 italic">
 				<span class="mr-1">Waiting...</span>
 				<span aria-label="Pleading Face" role="img">🥺</span>
 			</span>

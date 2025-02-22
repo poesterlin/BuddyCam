@@ -39,6 +39,8 @@
 					/>
 				</div>
 
+				<input type="hidden" name="redirect" value={page.url.search} />
+
 				<button
 					type="submit"
 					class="focus:shadow-outline w-full rounded bg-rose-500 px-4 py-2 font-bold text-white hover:bg-rose-700 focus:outline-none"

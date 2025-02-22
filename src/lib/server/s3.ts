@@ -17,6 +17,28 @@ export async function uploadFile(sha: string, file: File) {
 	await client.putObject(MINIO_BUCKET, sha, buffer, undefined, metaData);
 }
 
+export async function uploadFileFromPath(sha: string, path: string) {
+	await client.fPutObject(MINIO_BUCKET, sha, path);
+}
+
 export async function downloadFile(sha: string, output: string) {
 	await client.fGetObject(MINIO_BUCKET, sha, output);
+}
+
+export async function getFile(sha: string) {
+	const stream = await client.getObject(MINIO_BUCKET, sha);
+	return readStreamToBuffer(stream);
+}
+
+export function readStreamToBuffer(readable: any) {
+	return new Promise<Buffer>((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		readable.on('data', (chunk: Buffer) => {
+			chunks.push(chunk);
+		});
+		readable.on('end', () => {
+			resolve(Buffer.concat(chunks));
+		});
+		readable.on('error', reject);
+	});
 }

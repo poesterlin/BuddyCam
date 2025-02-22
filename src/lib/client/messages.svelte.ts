@@ -1,3 +1,5 @@
+import { goto } from '$app/navigation';
+import { EventType, type StartData } from '$lib/events';
 import type { Event } from '$lib/server/db/schema';
 import { source } from 'sveltekit-sse';
 
@@ -9,6 +11,10 @@ export const events = {
 	clear: (id: string) => {
 		const index = newEvents.findIndex((e) => e.event.id === id);
 		newEvents.splice(index, 1);
+
+		fetch(`/events?id=${id}`, { method: 'DELETE' }).then(() => {
+			console.log('event cleared');
+		});
 	}
 };
 
@@ -31,6 +37,18 @@ export function initMessageChannel() {
 				event,
 				clear: () => events.clear(event.id)
 			}));
+
+			const startEvents = hydrated.filter((e) => e.event.type === EventType.START);
+			if (startEvents.length > 0) {
+				const last = startEvents.at(-1);
+				if (!last) {
+					return;
+				}
+
+				const data = last.event.data as StartData;
+				goto(`/cam/${data.matchId}`);
+				startEvents.forEach((e) => e.clear());
+			}
 
 			events.new.push(...hydrated);
 		} catch (error) {

@@ -1,10 +1,9 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
+import { validateAuth } from '$lib/server/util';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
-	if (!locals.user) {
-		return redirect(302, '/login');
-	}
-
+export const load: LayoutServerLoad = async (event) => {
+	const locals = validateAuth(event);
+	
 	return { user: locals.user };
 };

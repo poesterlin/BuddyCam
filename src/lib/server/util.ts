@@ -20,9 +20,15 @@ export function validatePassword(password: unknown): password is string {
 	return typeof password === 'string' && password.length >= 6 && password.length <= 255;
 }
 
-export function assert(condition: any, code: number, message: string): asserts condition {
-	if (!condition) {
+export function assert(condition: any, message: string): asserts condition;
+export function assert(condition: any, code: number, message: string): asserts condition;
+export function assert(condition: any, code: number | string, message?: string): asserts condition {
+	if (!condition && typeof code === 'number') {
 		error(code, message);
+	}
+
+	if (!condition) {
+		throw new Error(message || 'Assertion failed');
 	}
 }
 
@@ -44,7 +50,7 @@ export function validateForm<T extends ZodObject<any>, Form extends z.infer<T>>(
 		const data = Object.fromEntries(form);
 		const result = validator.safeParse(data);
 
-		if (result.success === false) {
+		if (!result.success) {
 			return fail(400, { errors: result.error.errors, message: 'Invalid form data' });
 		}
 
@@ -56,7 +62,10 @@ type RequiredProperty<T> = { [P in keyof T]: Required<NonNullable<T[P]>> };
 
 export function validateAuth(events: any): RequiredProperty<App.Locals> | never {
 	const { request, locals } = events;
-	const redirectUrl = '/login?redirect=' + encodeURIComponent(request.url);
+
+	const url = new URL(request.url);
+	const redirectUrl = '/login?redirect=' + encodeURIComponent(url.pathname + url.search);
+
 	if (!locals.session) {
 		redirect(302, redirectUrl);
 	}

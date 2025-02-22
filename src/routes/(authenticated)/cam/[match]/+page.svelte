@@ -1,12 +1,29 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { EventType } from '$lib/events';
+	import { events } from '$lib/client/messages.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { applyAction, deserialize } from '$app/forms';
 
 	let videoRef: HTMLVideoElement;
 	let canvasRef: HTMLCanvasElement;
 	let stream: MediaStream | null = null;
-	let isUploading = false;
-	let availableCameras: MediaDeviceInfo[] = [];
+	let availableCameras = $state<MediaDeviceInfo[]>([]);
 	let currentCameraIndex = 0;
+
+	let isUploading = $state(false);
+	$effect(() => {
+		const shouldTrigger = events.new.find((event) => event.type === EventType.CAPTURE);
+		if (shouldTrigger) {
+			captureAndUpload();
+			shouldTrigger.close();
+		}
+	});
+
+	onMount(async () => {
+		availableCameras = await getAvailableCameras();
+		await initializeCamera();
+	});
 
 	async function getAvailableCameras() {
 		const devices = await navigator.mediaDevices.enumerateDevices();
@@ -36,11 +53,6 @@
 		await initializeCamera(availableCameras[currentCameraIndex].deviceId);
 	}
 
-	onMount(async () => {
-		availableCameras = await getAvailableCameras();
-		await initializeCamera();
-	});
-
 	async function captureAndUpload() {
 		if (videoRef && canvasRef && !isUploading) {
 			try {
@@ -66,11 +78,13 @@
 						body: formData
 					});
 
-					if (!response.ok) {
-						throw new Error('Upload failed');
+					const result: ActionResult = deserialize(await response.text());
+
+					if (result.type === 'success') {
+						await invalidateAll();
 					}
 
-					// Show success animation or feedback here
+					applyAction(result);
 				}
 			} catch (error) {
 				console.error('Error uploading photo:', error);
@@ -118,7 +132,7 @@
 			<button
 				on:click={captureAndUpload}
 				disabled={isUploading}
-				class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+				class="relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:scale-110 hover:rotate-3 hover:brightness-120 hover:before:opacity-100 focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{#if isUploading}
 					📤 Uploading...
@@ -140,7 +154,7 @@
 		</div>
 
 		<!-- Hidden Canvas for Photo Processing -->
-		<canvas bind:this={canvasRef} class="hidden" />
+		<canvas bind:this={canvasRef} class="hidden"></canvas>
 	</div>
 
 	<!-- Cute Footer -->

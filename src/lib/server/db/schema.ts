@@ -1,3 +1,4 @@
+import { read } from '$app/server';
 import { boolean, integer, json, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const usersTable = pgTable('user', {
@@ -43,7 +44,9 @@ export const eventsTable = pgTable('event', {
 	type: text('type').notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
 	sendAt: timestamp('send_at', { withTimezone: true, mode: 'date' }),
-	data: json('data')
+	data: json('data'),
+	persistent: boolean('persistent').notNull().default(false),
+	read: boolean('read').notNull().default(false)
 });
 
 export type Event = typeof eventsTable.$inferSelect;
@@ -54,7 +57,6 @@ export const matchupTable = pgTable('matchup', {
 		.notNull()
 		.references(() => usersTable.id),
 	friendId: text('opponent_id')
-		.notNull()
 		.references(() => usersTable.id),
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull()
 });
@@ -67,7 +69,6 @@ export const filesTable = pgTable('file', {
 		.notNull()
 		.references(() => usersTable.id),
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
-	sha: text('sha').notNull(),
 	matchupId: text('matchup_id')
 		.notNull()
 		.references(() => matchupTable.id)

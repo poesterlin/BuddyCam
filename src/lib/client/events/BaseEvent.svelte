@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { Event } from '$lib/server/db/schema';
+	import type { Snippet } from 'svelte';
 
-	let { event, clear }: { event: Event; clear: () => void } = $props();
+	let { clear, children }: { clear: () => void; children: Snippet } = $props();
 </script>
 
 <li
@@ -9,7 +9,7 @@
 >
 	<div class="flex items-center">
 		<div class="mr-2 h-2 w-2 rounded-full" style="background-color: #F59E0B"></div>
-		<p class="text-sm text-gray-700">{event.type}</p>
+		{@render children()}
 	</div>
 
 	<button
