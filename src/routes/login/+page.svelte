@@ -4,7 +4,7 @@
 </script>
 
 <div class="background flex h-screen items-center justify-center bg-pink-50">
-	<div class="card w-full max-w-md overflow-hidden rounded-lg bg-white shadow-xl">
+	<div class="card w-full w-md overflow-hidden rounded-lg bg-white shadow-xl">
 		<div class="px-6 py-8">
 			<h2 class="mb-6 text-center text-3xl font-semibold text-rose-500">
 				Welcome Back, Bestie! 💖
