@@ -28,45 +28,63 @@ export const events = {
  * @returns
  */
 export function initMessageChannel() {
-	const connection = source('/events').select('message');
+	const connection = source('/events', {
+		// reconnect on close
+		close({ connect }) {
+			connect();
+		}
+	}).select('message');
 
 	return connection.subscribe((d?: string) => {
 		if (!d) {
 			return;
 		}
 
+		let data: Event[] = [];
 		try {
-			const data = JSON.parse(d) as Event[];
+			data = JSON.parse(d) as Event[];
+		} catch (error) {
+			console.error('Failed to parse event', error);
+			return;
+		}
 
-			const hydrated = data.map((event) => ({
-				event,
-				clear: () => events.clear(event.id)
-			}));
-
-			const startEvents = hydrated.filter((e) => e.event.type === EventType.START);
-			if (startEvents.length > 0) {
-				const last = startEvents.at(-1);
-				if (!last) {
-					return;
-				}
-
-				const data = last.event.data as StartData;
-				goto(`/cam/${data.matchId}`);
-				startEvents.forEach((e) => e.clear());
+		// dedupe
+		const set = new Set<string>();
+		data = data.filter((event) => {
+			if (set.has(event.id)) {
+				return false;
 			}
 
-			if (hydrated.length === 0) {
+			set.add(event.id);
+			return true;
+		});
+
+		const hydrated = data.map((event) => ({
+			event,
+			clear: () => events.clear(event.id)
+		}));
+
+		const startEvents = hydrated.filter((e) => e.event.type === EventType.START);
+		if (startEvents.length > 0) {
+			const last = startEvents.at(-1);
+			if (!last) {
 				return;
 			}
 
-			const includesNonTechnical = hydrated.some(({ event }) => !event.isTechnical);
-			if (includesNonTechnical) {
-				toastStore.show('New Notification Received!');
-			}
-
-			events.new.push(...hydrated);
-		} catch (error) {
-			console.error(error);
+			const data = last.event.data as StartData;
+			goto(`/cam/${data.matchId}`);
+			startEvents.forEach((e) => e.clear());
 		}
+
+		if (hydrated.length === 0) {
+			return;
+		}
+
+		const includesNonTechnical = hydrated.some(({ event }) => !event.isTechnical);
+		if (includesNonTechnical) {
+			toastStore.show('New Notification Received!');
+		}
+
+		events.new.push(...hydrated);
 	});
 }
