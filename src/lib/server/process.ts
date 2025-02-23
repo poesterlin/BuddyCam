@@ -74,7 +74,7 @@ export class ImageVideoProcessor {
 			Math.max(img1Dims.width, img2Dims.width) / (img1Dims.height + img2Dims.height);
 
 		// Calculate how far each aspect ratio is from the "ideal" aspect ratio (16:9 = 1.778)
-		const idealAspectRatio = 16 / 9;
+		const idealAspectRatio = 9 / 16;
 		const horizontalDiff = Math.abs(horizontalAspectRatio - idealAspectRatio);
 		const verticalDiff = Math.abs(verticalAspectRatio - idealAspectRatio);
 
