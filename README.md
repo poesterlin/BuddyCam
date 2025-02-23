@@ -1,38 +1,65 @@
-# sv
+# BuddyCam: Fostering Meaningful Connections Through Shared Experiences
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+BuddyCam is a web application designed to facilitate meaningful connections and enhance shared experiences among users. The platform provides a unique approach to social interaction by enabling simultaneous capture of moments from multiple perspectives.
 
-## Creating a project
+## Key Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Dual-Perspective Capture:** Enables users to capture photos and videos from two viewpoints concurrently, fostering collaborative memory creation.
+- **Friend Request System:** Facilitates the establishment of connections and the expansion of user networks.
+- **User Profiles:** Provides a customizable space for users to showcase their personality and interests.
+- **Notification System:** Delivers timely updates on friend requests, messages, and other relevant events.
+- **Responsive Design:** Ensures optimal user experience across a variety of devices.
 
-```bash
-# create a new project in the current directory
-npx sv create
+## Technologies Used
 
-# create a new project in my-app
-npx sv create my-app
-```
+- **[SvelteKit](https://kit.svelte.dev/):** A framework for building web applications with a focus on performance and developer experience.
+- **[SvelteKit SSE](https://github.com/razshare/sveltekit-sse):** A SvelteKit plugin for server-sent events (SSE) support.
+- **[Tailwind CSS](https://tailwindcss.com/):** A utility-first CSS framework for rapid UI development.
+- **[Bun.js](https://bun.sh):** A JavaScript runtime environment for server-side execution.
+- **[Drizzle ORM](https://https://orm.drizzle.team/):** A lightweight and efficient object-relational mapping library
+- **[PostgreSQL](https://www.postgresql.org/):** A robust and scalable relational database management system.
+- **[Minio](https://min.io/):** An open-source object storage server compatible with Amazon S3 APIs.
 
-## Developing
+## Getting Started
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+1.  **Install dependencies:**
 
-```bash
-npm run dev
+    ```bash
+    bun install
+    ```
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+2.  **Configure environment variables:**
 
-## Building
+    - Create a `.env` file in the root directory.
+    - Define the necessary environment variables (replace with your actual values):
 
-To create a production version of your app:
+    ```
+    DATABASE_URL="postgres://user:password@host:port/db-name"
 
-```bash
-npm run build
-```
+    MINIO_URL=
+    MINIO_KEY=
+    MINIO_SECRET=
+    MINIO_BUCKET=
+    MINIO_PORT=
+    ```
 
-You can preview the production build with `npm run preview`.
+3.  **Start the development server:**
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+    ```bash
+    bun run dev
+    ```
+
+    This command will launch the development server and open the application in your web browser.
+
+## Contributing
+
+Contributions to BuddyCam are welcome. Please adhere to the following guidelines:
+
+1.  Fork the repository.
+2.  Create a dedicated branch for your proposed changes.
+3.  Implement your modifications and commit them with descriptive messages.
+4.  Submit a pull request for review.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
