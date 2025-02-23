@@ -93,17 +93,27 @@ export class ImageVideoProcessor {
 				throw new ImageProcessingError('Invalid image metadata');
 			}
 
+			const totalHeight = Math.max(img1Meta.height, img2Meta.height);
+
 			const outputBuffer = await sharp({
 				create: {
 					width: img1Meta.width + img2Meta.width,
-					height: Math.max(img1Meta.height, img2Meta.height),
+					height: totalHeight,
 					channels: 4,
 					background: { r: 255, g: 255, b: 255, alpha: 1 }
 				}
 			})
 				.composite([
-					{ input: image1, left: 0, top: 0 },
-					{ input: image2, left: img1Meta.width, top: 0 }
+					{
+						input: image1,
+						left: 0,
+						top: Math.floor((totalHeight - img1Meta.height) / 2)
+					},
+					{
+						input: image2,
+						left: img1Meta.width,
+						top: Math.floor((totalHeight - img2Meta.height) / 2)
+					}
 				])
 				.jpeg()
 				.toBuffer();
@@ -126,17 +136,27 @@ export class ImageVideoProcessor {
 				throw new ImageProcessingError('Invalid image metadata');
 			}
 
+			const totalWidth = Math.max(img1Meta.width, img2Meta.width);
+
 			const outputBuffer = await sharp({
 				create: {
-					width: Math.max(img1Meta.width, img2Meta.width),
+					width: totalWidth,
 					height: img1Meta.height + img2Meta.height,
 					channels: 4,
 					background: { r: 255, g: 255, b: 255, alpha: 1 }
 				}
 			})
 				.composite([
-					{ input: image1, left: 0, top: 0 },
-					{ input: image2, left: 0, top: img1Meta.height }
+					{
+						input: image1,
+						left: Math.floor((totalWidth - img1Meta.width) / 2),
+						top: 0
+					},
+					{
+						input: image2,
+						left: Math.floor((totalWidth - img2Meta.width) / 2),
+						top: img1Meta.height
+					}
 				])
 				.jpeg()
 				.toBuffer();
