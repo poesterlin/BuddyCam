@@ -67,7 +67,7 @@
 		</div>
 	</nav>
 
-	<main class="px-4">
+	<main class="overflow-y-auto px-4">
 		{@render children()}
 
 		{#each toastStore.toasts as toast, i (toast.id)}
