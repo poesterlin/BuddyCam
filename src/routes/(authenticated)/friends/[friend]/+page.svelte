@@ -11,8 +11,8 @@
 	}
 </script>
 
-<div class="flex flex-col items-center justify-center space-y-24">
-	<h1 class="mt-24 text-3xl font-extrabold text-rose-500">
+<div class="flex flex-col items-center justify-center">
+	<h1 class="mt-4 text-3xl font-extrabold text-rose-500">
 		🌟 {data.friend.username} & Du 🌟
 	</h1>
 
@@ -26,12 +26,15 @@
 				autoplay
 				loop
 				playsinline
-				class=" h-full w-full object-cover"
+				class="h-full w-full overflow-hidden rounded-lg object-cover"
 			>
 			</video>
 
-			<button onclick={download}>
-				<IconDownload class="absolute right-4 bottom-4 h-8 w-8 text-white" />
+			<button
+				onclick={download}
+				class="absolute right-4 bottom-4 rounded-lg bg-gradient-to-r from-rose-400 to-amber-400 p-2 shadow-md"
+			>
+				<IconDownload class="text-white" />
 			</button>
 		</div>
 	{:else}
@@ -45,7 +48,7 @@
 
 <style>
 	video {
-		max-height: 65svh;
+		max-height: 75svh;
 		max-width: 95vw;
 	}
 </style>
