@@ -3,7 +3,7 @@
 </script>
 
 <div
-	class="flex h-screen flex-col items-center justify-center bg-gradient-to-br from-pink-50 to-yellow-50"
+	class="flex h-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 to-yellow-50"
 >
 	<div class="mb-24 max-w-md space-y-6 rounded-3xl bg-white p-8 text-center shadow-xl">
 		<h1 class="text-2xl font-bold text-rose-500">

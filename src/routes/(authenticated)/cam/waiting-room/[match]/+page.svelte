@@ -1,5 +1,5 @@
 <div
-	class="flex h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-pink-50 to-yellow-50"
+	class="flex h-full items-center justify-center overflow-hidden bg-gradient-to-b from-pink-50 to-yellow-50"
 >
 	<div class="rounded-3xl bg-white p-8 text-center shadow-xl">
 		<p class="text-2xl font-semibold text-rose-500">Waiting for a friend to join 💖</p>
