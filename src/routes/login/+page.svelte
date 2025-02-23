@@ -6,7 +6,7 @@
 	let { form } = $props();
 </script>
 
-<div class="background flex h-full items-center justify-center bg-pink-50">
+<div class="background flex h-screen items-center justify-center bg-pink-50">
 	<div class="card w-full w-md overflow-hidden rounded-lg bg-white shadow-xl">
 		<div class="px-6 py-8">
 			<h2 class="mb-6 text-center text-3xl font-semibold text-rose-500">
@@ -43,9 +43,7 @@
 				</div>
 
 				{#if form?.message}
-					<p class="text-center text-sm text-balance text-fuchsia-500" transition:fade>
-						{form.message}
-					</p>
+					<p class="text-sm text-balance text-center text-fuchsia-500" transition:fade>{form.message}</p>
 				{/if}
 
 				<input type="hidden" name="redirect" value={page.url.search} />
