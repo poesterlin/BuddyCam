@@ -4,7 +4,6 @@ import { ImageVideoProcessor, type ImagePair } from '$lib/server/process';
 import { validateAuth } from '$lib/server/util';
 import { and, eq, or } from 'drizzle-orm';
 import { getFile } from '$lib/server/s3';
-import { createReadStream, readFile } from 'fs';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {
@@ -45,9 +44,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 
 	const processor = new ImageVideoProcessor({ folder: friend, fps: 2 });
-	const videoPath = await processor.processImagesAndCreateVideo(pairs);
-
-	const stream = await createReadStream(videoPath);
+	const stream = await processor.processImagesAndCreateVideo(pairs);
 
 	// @ts-expect-error - Stream is not a valid ResponseInit but it works
 	return new Response(stream, {

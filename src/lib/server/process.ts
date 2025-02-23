@@ -5,6 +5,7 @@ import { join } from 'path';
 import fs from 'fs/promises';
 import { env } from '$env/dynamic/private';
 import { assert } from './util';
+import { PassThrough } from 'stream';
 
 // Configure ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -182,38 +183,41 @@ export class ImageVideoProcessor {
 		}
 	}
 
-	private createVideoFromImages(inputDir: string): Promise<string> {
-		let output = this.videoOutput;
-		assert(output, 'Video output path is required');
-
-		output = join(this.outputDir, output);
-
+	private createVideoFromImages(inputDir: string): Promise<NodeJS.ReadableStream> {
 		return new Promise((resolve, reject) => {
+			const passThrough = new PassThrough();
+
 			ffmpeg()
-				.input(`${inputDir}/%d.jpg`) // Assumes images are named 1.jpg, 2.jpg, etc.
+				.input(`${inputDir}/%d.jpg`)
 				.inputFPS(this.fps)
-				.output(output)
-				.on('end', () => resolve(output))
-				.on('error', (err) => reject(err))
-				.run();
+				.format('mp4')
+				.videoCodec('libx264')
+				.outputOptions(['-movflags frag_keyframe+empty_moov']) // ensures streaming compatibility
+				.on('start', (commandLine) => {
+					console.log('Spawned FFmpeg with command:', commandLine);
+				})
+				.on('error', (err, stdout, stderr) => {
+					console.error('FFmpeg error:', err.message);
+					// Optionally you can log stdout and stderr for debugging:
+					console.error('stdout:', stdout);
+					console.error('stderr:', stderr);
+					reject(err);
+				})
+				.on('end', () => {
+					console.log('FFmpeg processing finished');
+					// No need to resolve here because the stream end event will be handled by the client.
+				})
+				.pipe(passThrough, { end: true });
+
+			// Resolve immediately with the passThrough stream since we expect
+			// the ffmpeg to begin piping data into it.
+			resolve(passThrough);
 		});
 	}
 
-	/**
-	 * Cleanup the output directory
-	 */
-	private async cleanup(): Promise<void> {
-		try {
-			const files = await fs.readdir(this.outputDir);
-			await Promise.all(files.map((file) => fs.unlink(join(this.outputDir, file))));
-			await fs.rmdir(this.outputDir);
-		} catch (error) {
-			console.error('Error during cleanup:', error);
-			throw error;
-		}
-	}
-
-	public async processImagesAndCreateVideo(imagePairs: ImagePair[]): Promise<string> {
+	public async processImagesAndCreateVideo(
+		imagePairs: ImagePair[]
+	): Promise<NodeJS.ReadableStream> {
 		try {
 			// Create output directory if it doesn't exist
 			await fs.mkdir(this.outputDir, { recursive: true });
@@ -228,12 +232,7 @@ export class ImageVideoProcessor {
 			await Promise.all(mergePromises);
 
 			// Create video from merged images
-			const videoPath = await this.createVideoFromImages(this.outputDir);
-
-			// Cleanup if enabled
-			if (this.shouldCleanup) {
-				await this.cleanup();
-			}
+			const videoPath = this.createVideoFromImages(this.outputDir);
 
 			return videoPath;
 		} catch (error) {
