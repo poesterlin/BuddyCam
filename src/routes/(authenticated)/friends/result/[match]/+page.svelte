@@ -15,18 +15,31 @@
 	});
 </script>
 
-{#if files === 2}
-	<div>
-		<img src="/friends/result/{matchup.id}/img" alt="" />
-	</div>
-{:else if files === 1}
-	<div class="flex">
-		<img src="/friends/result/{matchup.id}/img" alt="" />
-		<!-- placeholder -->
-		<img src="/loading.gif" alt="loading" />
-	</div>
-{:else}
-	<div>
-		<img src="/loading.gif" alt="loading" />
-	</div>
-{/if}
+<div class="flex items-center justify-center">
+	{#if files === 2}
+		<div class="overflow-hidden rounded-2xl shadow-md">
+			<img
+				src="/friends/result/{matchup.id}/img"
+				alt="Matchup Result"
+				class="h-auto w-full object-cover"
+			/>
+		</div>
+	{:else if files === 1}
+		<div class="flex space-x-4">
+			<div class="overflow-hidden rounded-2xl shadow-md">
+				<img
+					src="/friends/result/{matchup.id}/img"
+					alt="Matchup Result"
+					class="h-auto w-full object-cover"
+				/>
+			</div>
+			<div class="overflow-hidden rounded-2xl shadow-md">
+				<img src="/loading.gif" alt="Loading..." class="h-auto w-full animate-pulse object-cover" />
+			</div>
+		</div>
+	{:else}
+		<div class="overflow-hidden rounded-2xl shadow-md">
+			<img src="/loading.gif" alt="Loading..." class="h-auto w-full animate-pulse object-cover" />
+		</div>
+	{/if}
+</div>
