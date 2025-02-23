@@ -4,9 +4,10 @@ export enum EventType {
 	LOGIN = 'LOGIN',
 	REGISTER = 'REGISTER',
 	READY = 'READY',
-    START = "START",
+	START = 'START',
 	CAPTURE = 'CAPTURE',
-	UPLOAD = "UPLOAD",
+	UPLOAD = 'UPLOAD',
+	DELETE_MATCHUP = 'DELETE_MATCHUP'
 }
 
 export interface FriendRequestData {
@@ -25,3 +26,6 @@ export interface StartData {
 
 export type CaptureData = StartData;
 export type UploadData = StartData;
+export interface DeleteMatchupData extends StartData {
+	fromUsername: string;
+}
