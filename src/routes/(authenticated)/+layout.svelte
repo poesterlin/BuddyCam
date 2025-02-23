@@ -45,7 +45,7 @@
 						aria-current={page.url.pathname === '/'}>BuddyCam</a
 					>
 				</div>
-				<div class="flex items-center gap-6">
+				<div class="ml-6 flex items-center gap-6">
 					<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
 						<IconBell class="text-amber-400"></IconBell>
 						{#if events.count > 0}
