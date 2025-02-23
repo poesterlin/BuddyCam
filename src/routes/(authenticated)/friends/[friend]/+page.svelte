@@ -45,7 +45,7 @@
 
 <style>
 	video {
-		max-height: 50svh;
+		max-height: 65svh;
 		max-width: 95vw;
 	}
 </style>

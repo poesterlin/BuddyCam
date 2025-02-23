@@ -30,8 +30,7 @@ export const GET: RequestHandler = async (event) => {
 
 	const [file1, file2] = await Promise.all(files.map((file) => getFile(file.id)));
 
-	const processor = new ImageVideoProcessor();
-
+	const processor = new ImageVideoProcessor({ folder: matchup.id });
 	const buffer = await processor.mergeSideBySide(file1, file2);
 
 	return new Response(buffer, {

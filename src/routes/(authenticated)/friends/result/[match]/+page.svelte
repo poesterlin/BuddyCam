@@ -7,7 +7,7 @@
 	let { files, matchup } = data;
 
 	$effect(() => {
-		const upload = events.new.find(({event}) => event.type === EventType.UPLOAD);
+		const upload = events.new.find(({ event }) => event.type === EventType.UPLOAD);
 		if (upload) {
 			invalidateAll();
 			upload.clear();
