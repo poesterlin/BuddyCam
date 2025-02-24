@@ -24,8 +24,8 @@ export const GET: RequestHandler = async (event) => {
 	assert(matchup, 404, 'Match not found');
 
 	const files = await db.select().from(filesTable).where(eq(filesTable.matchupId, match));
-	if (files.length < 2) {
-		return error(404, 'Files not found');
+	if (files.length === 0) {
+		error(404, 'Files not found');
 	}
 
 	if (files.length === 1) {
