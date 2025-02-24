@@ -7,7 +7,7 @@
 	let { data } = $props();
 	let { files, matchup } = data;
 
-	let randomId = $state(Math.random());
+	let randomKey = $state(Math.random());
 
 	const myId = data.user.id;
 	const other = myId === matchup.friendId ? matchup.userId : matchup.friendId;
@@ -23,6 +23,8 @@
 		if (deleteEvent) {
 			invalidateAll();
 		}
+
+		randomKey = Math.random();
 	});
 </script>
 
@@ -30,7 +32,7 @@
 	{#if files === 2}
 		<div class="overflow-hidden rounded-2xl shadow-md">
 			<img
-				src="/friends/result/{matchup.id}/img?{randomId}"
+				src="/friends/result/{matchup.id}/img?{randomKey}"
 				alt="Matchup Result"
 				class="h-auto w-full object-cover"
 			/>
@@ -39,7 +41,7 @@
 		<div class="flex space-x-4">
 			<div class="overflow-hidden rounded-2xl shadow-md">
 				<img
-					src="/friends/result/{matchup.id}/img?{randomId}"
+					src="/friends/result/{matchup.id}/img?{randomKey}"
 					alt="Matchup Result"
 					class="h-auto w-full object-cover"
 				/>
