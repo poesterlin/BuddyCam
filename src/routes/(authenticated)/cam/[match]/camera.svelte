@@ -47,6 +47,7 @@
 	async function getAvailableCameras() {
 		try {
 			const devices = await navigator.mediaDevices.enumerateDevices();
+			debugger;
 			return devices.filter((device) => device.kind === 'videoinput');
 		} catch (e: any) {
 			toastStore.show('Error accessing camera' + (e.message ? `: ${e.message}` : ''));
@@ -60,6 +61,8 @@
 			if (stream) {
 				stream.getTracks().forEach((track) => track.stop());
 			}
+
+			debugger;
 
 			stream = await navigator.mediaDevices.getUserMedia({
 				video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }
