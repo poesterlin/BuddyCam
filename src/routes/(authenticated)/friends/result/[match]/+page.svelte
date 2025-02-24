@@ -29,7 +29,7 @@
 </script>
 
 <div
-	class="container mx-auto mt-4 flex items-center justify-center overflow-hidden rounded-lg bg-white shadow-lg"
+	class="container mx-auto mt-4 flex items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg"
 >
 	{#if files === 2}
 		<img
@@ -44,10 +44,10 @@
 				alt="Matchup Result"
 				class="h-full w-full object-cover"
 			/>
-			<img src="/loading.gif" alt="Loading..." class="h-auto w-full animate-pulse object-cover" />
+			<img src="/loading.gif" alt="Loading..." class="h-auto w-full object-cover" />
 		</div>
 	{:else}
-		<img src="/loading.gif" alt="Loading..." class="h-auto w-full animate-pulse object-cover" />
+		<img src="/loading.gif" alt="Loading..." class="h-auto w-full object-cover" />
 	{/if}
 </div>
 
