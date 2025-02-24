@@ -14,18 +14,17 @@
 	let stream: MediaStream | null = null;
 	let gl: WebGLRenderingContext | null = null;
 
-	let availableCameras = $state<MediaDeviceInfo[]>([]);
-	let currentCameraIndex = $state(0);
-	let stopRendering = false;
-	let shouldCapture = false;
-
-	let useWebGl = $state(false);
-	let webglSupported = $state(false);
-
-	let videoSize = $state({ width: 640, height: 480 });
-
 	let { upload, isUploading }: { upload: (blob: Blob) => Promise<void>; isUploading: boolean } =
 		$props();
+
+	let availableCameras = $state<MediaDeviceInfo[]>([]);
+	let currentCameraIndex = $state(0);
+	let useWebGl = $state(false);
+	let webglSupported = $state(false);
+	let videoSize = $state({ width: 640, height: 480 });
+
+	let stopRendering = false;
+	let shouldCapture = false;
 
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
@@ -88,6 +87,8 @@
 
 		currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
 		await initializeCamera(availableCameras[currentCameraIndex].deviceId);
+
+		startRender();
 	}
 
 	async function capture() {
