@@ -15,7 +15,8 @@
 
 	let availableCameras = $state<MediaDeviceInfo[]>([]);
 	let currentCameraIndex = $state(0);
-	let stopRendering = $state(false);
+	let stopRendering = false;
+	let shouldCapture = false;
 
 	let { upload, isUploading }: { upload: (blob: Blob) => Promise<void>; isUploading: boolean } =
 		$props();
@@ -87,14 +88,18 @@
 
 		try {
 			isUploading = true;
-			assert(gl, 'Canvas context is null');
-
 			stopRendering = true;
 
 			// Convert canvas to blob
-			const blob = await new Promise<Blob>((resolve) =>
-				canvasRef.toBlob((blob) => resolve(blob!), 'image/jpeg')
-			);
+			const blob = await new Promise<Blob>((resolve) => {
+				canvasRef.toBlob((blob) => {
+					if (blob) {
+						resolve(blob);
+					} else {
+						toastStore.show('Error capturing photo');
+					}
+				});
+			});
 
 			upload(blob);
 		} catch (error) {
@@ -197,6 +202,12 @@
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoRef);
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+		if (shouldCapture) {
+			shouldCapture = false;
+			capture();
+		}
+
 		requestAnimationFrame(() => render(data));
 	}
 </script>
@@ -234,7 +245,7 @@
 <div class="mt-8 flex flex-col items-center gap-4">
 	<!-- Capture Button -->
 	<button
-		onclick={capture}
+		onclick={() => (shouldCapture = true)}
 		disabled={isUploading}
 		class="relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:scale-110 hover:rotate-3 hover:brightness-120 hover:before:opacity-100 focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 	>
