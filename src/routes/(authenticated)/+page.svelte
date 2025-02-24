@@ -30,8 +30,4 @@
 	button {
 		letter-spacing: 1px;
 	}
-
-	h1 {
-		font-family: 'Comic Sans MS', cursive;
-	}
 </style>
