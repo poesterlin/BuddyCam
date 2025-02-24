@@ -5,12 +5,11 @@
 	import { IconCameraPlus, IconCancel } from '@tabler/icons-svelte';
 
 	let { data } = $props();
-	let { files, matchup } = data;
 
 	let randomKey = $state(Math.random());
 
 	const myId = data.user.id;
-	const other = myId === matchup.friendId ? matchup.userId : matchup.friendId;
+	const other = myId === data.matchup.friendId ? data.matchup.userId : data.matchup.friendId;
 
 	$effect(() => {
 		const upload = events.new.find(({ event }) => event.type === EventType.UPLOAD);
@@ -31,16 +30,16 @@
 <div
 	class="container mx-auto mt-4 flex items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg"
 >
-	{#if files === 2}
+	{#if data.files === 2}
 		<img
-			src="/friends/result/{matchup.id}/img?{randomKey}"
+			src="/friends/result/{data.matchup.id}/img?{randomKey}"
 			alt="Matchup Result"
 			class="h-auto w-full object-cover"
 		/>
-	{:else if files === 1}
+	{:else if data.files === 1}
 		<div class="grid grid-cols-2 gap-2">
 			<img
-				src="/friends/result/{matchup.id}/img?{randomKey}"
+				src="/friends/result/{data.matchup.id}/img?{randomKey}"
 				alt="Matchup Result"
 				class="h-full w-full object-cover"
 			/>

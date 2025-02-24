@@ -25,6 +25,10 @@ export async function downloadFile(sha: string, output: string) {
 	await client.fGetObject(MINIO_BUCKET, sha, output);
 }
 
+export async function getFileStream(sha: string) {
+	return client.getObject(MINIO_BUCKET, sha);
+}
+
 export async function getFile(sha: string) {
 	const stream = await client.getObject(MINIO_BUCKET, sha);
 	return readStreamToBuffer(stream);

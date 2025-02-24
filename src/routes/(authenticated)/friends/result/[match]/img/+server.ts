@@ -3,7 +3,7 @@ import { filesTable, matchupTable } from '$lib/server/db/schema';
 import { assert, validateAuth } from '$lib/server/util';
 import { and, eq, or } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
-import { getFile } from '$lib/server/s3';
+import { getFile, getFileStream } from '$lib/server/s3';
 import { ImageVideoProcessor } from '$lib/server/process';
 import { error } from '@sveltejs/kit';
 
@@ -23,13 +23,14 @@ export const GET: RequestHandler = async (event) => {
 
 	assert(matchup, 404, 'Match not found');
 
-	const files = await db.select().from(filesTable).where(eq(filesTable.matchupId, match));
+	const files = await db.select().from(filesTable).where(eq(filesTable.matchupId, match)).limit(2);
 	if (files.length === 0) {
 		error(404, 'Files not found');
 	}
 
 	if (files.length === 1) {
-		return new Response(await getFile(files[0].id), {
+		// @ts-expect-error - stream is supported but not in the types
+		return new Response(await getFileStream(files[0].id), {
 			headers: {
 				'Content-Type': 'image/jpeg'
 			}
