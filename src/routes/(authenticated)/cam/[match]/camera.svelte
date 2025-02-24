@@ -18,6 +18,8 @@
 	let stopRendering = false;
 	let shouldCapture = false;
 
+	let webGLSupported = $state(false);
+
 	let { upload, isUploading }: { upload: (blob: Blob) => Promise<void>; isUploading: boolean } =
 		$props();
 
@@ -27,12 +29,12 @@
 			capture();
 			shouldTrigger.clear();
 		}
-
-		console.log(currentCameraIndex);
-		console.log(stopRendering ? 'rendering stopped' : 'rendering allowed');
 	});
 
 	onMount(async () => {
+		webGLSupported = false && !!document.createElement('canvas').getContext('webgl2');
+		toastStore.show(webGLSupported ? 'WebGL supported' : 'WebGL not supported');
+
 		availableCameras = await getAvailableCameras();
 		await initializeCamera();
 	});
@@ -90,6 +92,12 @@
 			isUploading = true;
 			stopRendering = true;
 
+			if (!gl) {
+				const ctx = canvasRef.getContext('2d');
+				assert(ctx, 'Canvas context is null');
+				ctx.drawImage(videoRef, 0, 0, canvasRef.width, canvasRef.height);
+			}
+
 			// Convert canvas to blob
 			const blob = await new Promise<Blob>((resolve) => {
 				canvasRef.toBlob((blob) => {
@@ -121,7 +129,7 @@
 		try {
 			assert(canvasRef, 'Canvas element is null');
 
-			gl = canvasRef.getContext('webgl');
+			gl = canvasRef.getContext('webgl2');
 			assert(gl, 'WebGL context is null');
 
 			const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VertexShader);
@@ -165,8 +173,8 @@
 			render({ texture, startTime: Date.now(), u_time, fps: 0, second: 0 });
 		} catch (e: any) {
 			console.error(e);
-
 			toastStore.show(e.message);
+			webGLSupported = false;
 		}
 	}
 
@@ -189,6 +197,7 @@
 		if (currentSecond !== data.second) {
 			if (data.fps < 60) {
 				console.info('FPS dropped:', data.fps);
+				toastStore.show('Low FPS detected: ' + data.fps);
 			}
 			data.fps = 0;
 			data.second = currentSecond;
@@ -210,6 +219,14 @@
 
 		requestAnimationFrame(() => render(data));
 	}
+
+	function takePicture() {
+		if (webGLSupported) {
+			shouldCapture = true;
+		} else {
+			capture();
+		}
+	}
 </script>
 
 <!-- Camera Preview Container -->
@@ -219,7 +236,8 @@
 		bind:this={videoRef}
 		autoplay
 		playsinline
-		class="hidden"
+		class="w-full rounded-2xl"
+		class:hidden={!webGLSupported}
 		aria-hidden="true"
 		onloadedmetadata={initCanvas}
 		onplaying={startRender}
@@ -228,7 +246,7 @@
 	</video>
 
 	<!-- Hidden Canvas for Photo Processing -->
-	<canvas bind:this={canvasRef} class="w-full rounded-2xl"></canvas>
+	<canvas bind:this={canvasRef} class="w-full rounded-2xl" class:hidden={webGLSupported}></canvas>
 
 	<!-- Loading Overlay -->
 	{#if isUploading}
@@ -245,7 +263,7 @@
 <div class="mt-8 flex flex-col items-center gap-4">
 	<!-- Capture Button -->
 	<button
-		onclick={() => (shouldCapture = true)}
+		onclick={takePicture}
 		disabled={isUploading}
 		class="relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:scale-110 hover:rotate-3 hover:brightness-120 hover:before:opacity-100 focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 	>
