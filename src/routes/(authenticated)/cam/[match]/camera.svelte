@@ -166,8 +166,8 @@
 
 		const currentSecond = Math.floor(Date.now() / 1000);
 		if (currentSecond !== data.second) {
-			if (data.fps != 60) {
-				console.info('FPS:', data.fps);
+			if (data.fps < 60) {
+				console.info('FPS dropped:', data.fps);
 			}
 			data.fps = 0;
 			data.second = currentSecond;
