@@ -96,16 +96,28 @@ export const actions: Actions = {
 			await uploadFile(id, form.photo);
 
 			// add upload event
-			await db.insert(eventsTable).values({
-				id: generateId(),
-				type: EventType.UPLOAD,
-				userId: other,
-				createdAt: new Date(),
-				isTechnical: true,
-				data: {
-					matchId: match
-				} satisfies UploadData
-			});
+			await db.insert(eventsTable).values([
+				{
+					id: generateId(),
+					type: EventType.UPLOAD,
+					userId: other,
+					createdAt: new Date(),
+					isTechnical: true,
+					data: {
+						matchId: match
+					} satisfies UploadData
+				},
+				{
+					id: generateId(),
+					type: EventType.UPLOAD,
+					userId: user.id,
+					createdAt: new Date(),
+					isTechnical: true,
+					data: {
+						matchId: match
+					} satisfies UploadData
+				}
+			]);
 
 			redirect(302, '/friends/result/' + match);
 		}
