@@ -24,8 +24,16 @@ export const GET: RequestHandler = async (event) => {
 	assert(matchup, 404, 'Match not found');
 
 	const files = await db.select().from(filesTable).where(eq(filesTable.matchupId, match));
-	if (files.length !== 2) {
-		error(400, 'Both users must upload a file');
+	if (files.length < 2) {
+		return error(404, 'Files not found');
+	}
+
+	if (files.length === 1) {
+		return new Response(await getFile(files[0].id), {
+			headers: {
+				'Content-Type': 'image/jpeg'
+			}
+		});
 	}
 
 	const [file1, file2] = await Promise.all(files.map((file) => getFile(file.id)));
