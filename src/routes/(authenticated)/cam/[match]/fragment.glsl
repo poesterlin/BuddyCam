@@ -6,7 +6,7 @@ uniform float u_time;
 
 
 void main() {
-    float u_distortionAmount = 0.5;
+    float u_distortionAmount = 4.5;
     float u_chromaticAmount = 0.4;
     float u_vignetteAmount = 0.5;
     float u_lightLeakAmount = 3.5;

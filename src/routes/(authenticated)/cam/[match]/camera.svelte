@@ -7,6 +7,7 @@
 	import VertexShader from './vertex.glsl?raw';
 	import { compileShader, linkProgram, vertices } from '$lib/client/glsl';
 	import { toastStore } from '$lib/client/toast.svelte';
+	import { IconToggleLeft, IconToggleRight } from '@tabler/icons-svelte';
 
 	let videoRef: HTMLVideoElement;
 	let canvasRef: HTMLCanvasElement;
@@ -18,7 +19,8 @@
 	let stopRendering = false;
 	let shouldCapture = false;
 
-	let webGLSupported = $state(false);
+	let useWebGl = $state(false);
+	let webglSupported = $state(false);
 
 	let { upload, isUploading }: { upload: (blob: Blob) => Promise<void>; isUploading: boolean } =
 		$props();
@@ -32,8 +34,10 @@
 	});
 
 	onMount(async () => {
-		webGLSupported = false && !!document.createElement('canvas').getContext('webgl2');
-		toastStore.show(webGLSupported ? 'WebGL supported' : 'WebGL not supported');
+		gl = canvasRef.getContext('webgl2');
+		webglSupported = !!gl;
+		useWebGl = webglSupported;
+		toastStore.show(webglSupported ? 'WebGL supported' : 'WebGL not supported');
 
 		availableCameras = await getAvailableCameras();
 		await initializeCamera();
@@ -60,9 +64,8 @@
 				video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }
 			});
 
-			if (videoRef) {
-				videoRef.srcObject = stream;
-			}
+			assert(videoRef, 'Video element is null');
+			videoRef.srcObject = stream;
 
 			stopRendering = false;
 		} catch (err: any) {
@@ -92,7 +95,7 @@
 			isUploading = true;
 			stopRendering = true;
 
-			if (!gl) {
+			if (!useWebGl) {
 				const ctx = canvasRef.getContext('2d');
 				assert(ctx, 'Canvas context is null');
 				ctx.drawImage(videoRef, 0, 0, canvasRef.width, canvasRef.height);
@@ -127,9 +130,13 @@
 
 	function startRender() {
 		try {
+			if (!useWebGl) {
+				return;
+			}
+
 			assert(canvasRef, 'Canvas element is null');
 
-			gl = canvasRef.getContext('webgl2');
+			gl = gl || canvasRef.getContext('webgl2');
 			assert(gl, 'WebGL context is null');
 
 			const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VertexShader);
@@ -171,10 +178,12 @@
 
 			// Render loop: update texture with video frame and redraw.
 			render({ texture, startTime: Date.now(), u_time, fps: 0, second: 0 });
+
+			console.info('WebGL initialized');
 		} catch (e: any) {
 			console.error(e);
 			toastStore.show(e.message);
-			webGLSupported = false;
+			// useWebGl = false;
 		}
 	}
 
@@ -189,20 +198,24 @@
 		fps: number;
 		second: number;
 	}) {
-		if (stopRendering) {
+		if (!useWebGl) {
 			return;
 		}
 
 		const currentSecond = Math.floor(Date.now() / 1000);
 		if (currentSecond !== data.second) {
 			if (data.fps < 60) {
-				console.info('FPS dropped:', data.fps);
 				toastStore.show('Low FPS detected: ' + data.fps);
 			}
 			data.fps = 0;
 			data.second = currentSecond;
 		}
 		data.fps++;
+
+		if (stopRendering) {
+			requestAnimationFrame(() => render(data));
+			return;
+		}
 
 		const { texture, startTime, u_time } = data;
 
@@ -221,7 +234,7 @@
 	}
 
 	function takePicture() {
-		if (webGLSupported) {
+		if (useWebGl) {
 			shouldCapture = true;
 		} else {
 			capture();
@@ -231,13 +244,30 @@
 
 <!-- Camera Preview Container -->
 <div class="relative overflow-hidden rounded-3xl border-8 border-white bg-white p-2 shadow-2xl">
+	{#if webglSupported}
+		<button
+			class="absolute top-4 right-4 z-10 rounded-full bg-white p-2 shadow-md hover:shadow-lg focus:ring-0 focus:outline-none"
+			onclick={() => {
+				useWebGl = !useWebGl;
+				startRender();
+			}}
+		>
+			Filter
+			{#if useWebGl}
+				<IconToggleLeft></IconToggleLeft>
+			{:else}
+				<IconToggleRight></IconToggleRight>
+			{/if}
+		</button>
+	{/if}
+
 	<!-- Video Preview -->
 	<video
 		bind:this={videoRef}
 		autoplay
 		playsinline
 		class="w-full rounded-2xl"
-		class:hidden={!webGLSupported}
+		class:hidden={useWebGl}
 		aria-hidden="true"
 		onloadedmetadata={initCanvas}
 		onplaying={startRender}
@@ -246,7 +276,13 @@
 	</video>
 
 	<!-- Hidden Canvas for Photo Processing -->
-	<canvas bind:this={canvasRef} class="w-full rounded-2xl" class:hidden={webGLSupported}></canvas>
+	<canvas
+		bind:this={canvasRef}
+		class="w-full rounded-2xl"
+		width="640"
+		height="480"
+		class:hidden={!useWebGl}
+	></canvas>
 
 	<!-- Loading Overlay -->
 	{#if isUploading}
