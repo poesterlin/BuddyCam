@@ -6,6 +6,7 @@
 	import FragmentShader from './fragment.glsl?raw';
 	import VertexShader from './vertex.glsl?raw';
 	import { compileShader, linkProgram, vertices } from '$lib/client/glsl';
+	import { toastStore } from '$lib/client/toast.svelte';
 
 	let videoRef: HTMLVideoElement;
 	let canvasRef: HTMLCanvasElement;
@@ -36,8 +37,14 @@
 	});
 
 	async function getAvailableCameras() {
-		const devices = await navigator.mediaDevices.enumerateDevices();
-		return devices.filter((device) => device.kind === 'videoinput');
+		try {
+			const devices = await navigator.mediaDevices.enumerateDevices();
+			return devices.filter((device) => device.kind === 'videoinput');
+		} catch (e: any) {
+			toastStore.show('Error accessing camera' + (e.message ? `: ${e.message}` : ''));
+		}
+
+		return [];
 	}
 
 	async function initializeCamera(deviceId?: string) {
@@ -55,8 +62,10 @@
 			}
 
 			stopRendering = false;
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error accessing camera:', err);
+
+			toastStore.show('Error accessing camera' + (err.message ? `: ${err.message}` : ''));
 		}
 	}
 
@@ -90,7 +99,8 @@
 			upload(blob);
 		} catch (error) {
 			console.error('Error uploading photo:', error);
-			// Show error feedback here
+
+			toastStore.show('Error uploading photo');
 		} finally {
 			isUploading = false;
 		}
@@ -103,50 +113,56 @@
 	}
 
 	function startRender() {
-		assert(canvasRef, 'Canvas element is null');
+		try {
+			assert(canvasRef, 'Canvas element is null');
 
-		gl = canvasRef.getContext('webgl');
-		assert(gl, 'WebGL context is null');
+			gl = canvasRef.getContext('webgl');
+			assert(gl, 'WebGL context is null');
 
-		const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VertexShader);
-		const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, FragmentShader);
-		const program = linkProgram(gl, vertexShader, fragmentShader);
-		gl.useProgram(program);
+			const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VertexShader);
+			const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, FragmentShader);
+			const program = linkProgram(gl, vertexShader, fragmentShader);
+			gl.useProgram(program);
 
-		const vertexBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-		const FSIZE = vertices.BYTES_PER_ELEMENT;
+			const vertexBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+			const FSIZE = vertices.BYTES_PER_ELEMENT;
 
-		// Get attribute locations.
-		const a_position = gl.getAttribLocation(program, 'a_position');
-		gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 4, 0);
-		gl.enableVertexAttribArray(a_position);
-		const a_texCoord = gl.getAttribLocation(program, 'a_texCoord');
-		gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 4, FSIZE * 2);
-		gl.enableVertexAttribArray(a_texCoord);
+			// Get attribute locations.
+			const a_position = gl.getAttribLocation(program, 'a_position');
+			gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 4, 0);
+			gl.enableVertexAttribArray(a_position);
+			const a_texCoord = gl.getAttribLocation(program, 'a_texCoord');
+			gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 4, FSIZE * 2);
+			gl.enableVertexAttribArray(a_texCoord);
 
-		// Create and configure texture.
-		const texture = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			// Create and configure texture.
+			const texture = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, texture);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-		// Set which texture unit to render with.
-		const u_image = gl.getUniformLocation(program, 'u_image');
-		gl.uniform1i(u_image, 0);
+			// Set which texture unit to render with.
+			const u_image = gl.getUniformLocation(program, 'u_image');
+			gl.uniform1i(u_image, 0);
 
-		// Get the time uniform for animation.
-		const u_time = gl.getUniformLocation(program, 'u_time');
+			// Get the time uniform for animation.
+			const u_time = gl.getUniformLocation(program, 'u_time');
 
-		initCanvas();
+			initCanvas();
 
-		stopRendering = false;
+			stopRendering = false;
 
-		// Render loop: update texture with video frame and redraw.
-		render({ texture, startTime: Date.now(), u_time, fps: 0, second: 0 });
+			// Render loop: update texture with video frame and redraw.
+			render({ texture, startTime: Date.now(), u_time, fps: 0, second: 0 });
+		} catch (e: any) {
+			console.error(e);
+
+			toastStore.show(e.message);
+		}
 	}
 
 	/**
