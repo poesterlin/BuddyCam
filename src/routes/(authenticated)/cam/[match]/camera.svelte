@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { assert } from '$lib/client/util';
-	import { onMount } from 'svelte';
+	import { compileShader, linkProgram, vertices } from '$lib/client/glsl';
 	import { events } from '$lib/client/messages.svelte';
+	import { toastStore } from '$lib/client/toast.svelte';
+	import { assert } from '$lib/client/util';
 	import { EventType } from '$lib/events';
+	import { IconToggleLeft, IconToggleRightFilled } from '@tabler/icons-svelte';
+	import { onMount } from 'svelte';
 	import FragmentShader from './fragment.glsl?raw';
 	import VertexShader from './vertex.glsl?raw';
-	import { compileShader, linkProgram, vertices } from '$lib/client/glsl';
-	import { toastStore } from '$lib/client/toast.svelte';
-	import { IconToggleLeft, IconToggleRight } from '@tabler/icons-svelte';
 
 	let videoRef: HTMLVideoElement;
 	let canvasRef: HTMLCanvasElement;
@@ -21,6 +21,8 @@
 
 	let useWebGl = $state(false);
 	let webglSupported = $state(false);
+
+	let videoSize = $state({ width: 640, height: 480 });
 
 	let { upload, isUploading }: { upload: (blob: Blob) => Promise<void>; isUploading: boolean } =
 		$props();
@@ -64,8 +66,10 @@
 				video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }
 			});
 
-			assert(videoRef, 'Video element is null');
-			videoRef.srcObject = stream;
+			if (videoRef) {
+				// assert(videoRef, 'Video element is null');
+				videoRef.srcObject = stream;
+			}
 
 			stopRendering = false;
 		} catch (err: any) {
@@ -124,6 +128,8 @@
 
 	function initCanvas() {
 		// Set canvas size to match video aspect ratio
+		videoSize.width = videoRef.videoWidth;
+		videoSize.height = videoRef.videoHeight;
 		canvasRef.width = videoRef.videoWidth;
 		canvasRef.height = videoRef.videoHeight;
 	}
@@ -135,6 +141,7 @@
 			}
 
 			assert(canvasRef, 'Canvas element is null');
+			initCanvas();
 
 			gl = gl || canvasRef.getContext('webgl2');
 			assert(gl, 'WebGL context is null');
@@ -202,9 +209,11 @@
 			return;
 		}
 
+		assert(videoRef, 'Video element is null');
+
 		const currentSecond = Math.floor(Date.now() / 1000);
 		if (currentSecond !== data.second) {
-			if (data.fps < 60) {
+			if (data.fps < 40) {
 				toastStore.show('Low FPS detected: ' + data.fps);
 			}
 			data.fps = 0;
@@ -229,7 +238,6 @@
 			shouldCapture = false;
 			capture();
 		}
-
 		requestAnimationFrame(() => render(data));
 	}
 
@@ -252,11 +260,10 @@
 				startRender();
 			}}
 		>
-			Filter
 			{#if useWebGl}
-				<IconToggleLeft></IconToggleLeft>
+				<IconToggleRightFilled class="text-pink-500"></IconToggleRightFilled>
 			{:else}
-				<IconToggleRight></IconToggleRight>
+				<IconToggleLeft class="opacity-60"></IconToggleLeft>
 			{/if}
 		</button>
 	{/if}
@@ -279,8 +286,8 @@
 	<canvas
 		bind:this={canvasRef}
 		class="w-full rounded-2xl"
-		width="640"
-		height="480"
+		width={videoSize.width}
+		height={videoSize.height}
 		class:hidden={!useWebGl}
 	></canvas>
 
