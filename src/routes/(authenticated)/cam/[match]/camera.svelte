@@ -131,8 +131,9 @@
 		// Set canvas size to match video aspect ratio
 		videoSize.width = videoRef.videoWidth;
 		videoSize.height = videoRef.videoHeight;
-		canvasRef.width = videoRef.videoWidth;
-		canvasRef.height = videoRef.videoHeight;
+
+		// canvasRef.width = videoRef.videoWidth;
+		// canvasRef.height = videoRef.videoHeight;
 	}
 
 	function startRender() {
