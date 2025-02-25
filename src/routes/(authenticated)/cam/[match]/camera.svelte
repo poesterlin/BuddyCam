@@ -153,10 +153,6 @@
 		// Set the canvas dimensions to match the video's intrinsic size
 		canvasRef.width = width * dpr;
 		canvasRef.height = height * dpr;
-
-		// Use CSS to control the displayed size
-		canvasRef.style.width = `${width}px`;
-		canvasRef.style.height = `${height}px`;
 	}
 
 	function startRender() {
