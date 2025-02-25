@@ -38,7 +38,6 @@
 		gl = canvasRef.getContext('webgl2');
 		webglSupported = !!gl;
 		useWebGl = webglSupported;
-		toastStore.show(webglSupported ? 'WebGL supported' : 'WebGL not supported');
 
 		availableCameras = await getAvailableCameras();
 		await initializeCamera();
@@ -130,9 +129,8 @@
 
 			upload(blob);
 		} catch (error) {
-			console.error('Error uploading photo:', error);
-
 			toastStore.show('Error uploading photo');
+			console.error(error);
 		} finally {
 			isUploading = false;
 		}
@@ -211,9 +209,8 @@
 
 			console.info('WebGL initialized');
 		} catch (e: any) {
+			toastStore.show('Error when applying filter');
 			console.error(e);
-			toastStore.show(e.message);
-			// useWebGl = false;
 		}
 	}
 
@@ -237,7 +234,7 @@
 		const currentSecond = Math.floor(Date.now() / 1000);
 		if (currentSecond !== data.second) {
 			if (data.fps < 40) {
-				toastStore.show('Low FPS detected: ' + data.fps);
+				console.log('Low FPS detected: ' + data.fps);
 			}
 			data.fps = 0;
 			data.second = currentSecond;
