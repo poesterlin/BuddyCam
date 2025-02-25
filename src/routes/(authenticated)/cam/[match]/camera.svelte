@@ -62,8 +62,6 @@
 				stream.getTracks().forEach((track) => track.stop());
 			}
 
-			debugger;
-
 			stream = await navigator.mediaDevices.getUserMedia({
 				video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }
 			});
@@ -103,22 +101,27 @@
 			isUploading = true;
 			stopRendering = true;
 
-			if (!useWebGl) {
-				const ctx = canvasRef.getContext('2d');
-				assert(ctx, 'Canvas context is null');
-				ctx.drawImage(videoRef, 0, 0, canvasRef.width, canvasRef.height);
-			}
+			let blob: Blob;
 
-			// Convert canvas to blob
-			const blob = await new Promise<Blob>((resolve) => {
-				canvasRef.toBlob((blob) => {
-					if (blob) {
-						resolve(blob);
-					} else {
-						toastStore.show('Error capturing photo');
-					}
+			if (useWebGl) {
+				// Capture WebGL canvas
+				blob = await new Promise<Blob>((resolve) => {
+					canvasRef.toBlob((blob) => {
+						if (blob) {
+							resolve(blob);
+						} else {
+							toastStore.show('Error capturing photo');
+						}
+					});
 				});
-			});
+			} else {
+				// draw video frame to canvas
+				const canvas = new OffscreenCanvas(videoRef.videoWidth, videoRef.videoHeight);
+				const ctx = canvas.getContext('2d');
+				assert(ctx, 'Canvas context is null');
+				ctx.drawImage(videoRef, 0, 0, canvas.width, canvas.height);
+				blob = await canvas.convertToBlob();
+			}
 
 			upload(blob);
 		} catch (error) {
