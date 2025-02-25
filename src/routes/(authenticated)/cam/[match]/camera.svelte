@@ -63,7 +63,12 @@
 			}
 
 			stream = await navigator.mediaDevices.getUserMedia({
-				video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }
+				video: {
+					deviceId: deviceId ? { exact: deviceId } : undefined,
+					facingMode: deviceId ? undefined : 'environment',
+					width: { ideal: 1920 },
+					height: { ideal: 1080 }
+				}
 			});
 
 			if (videoRef) {
@@ -138,8 +143,20 @@
 		videoSize.width = videoRef.videoWidth;
 		videoSize.height = videoRef.videoHeight;
 
-		// canvasRef.width = videoRef.videoWidth;
-		// canvasRef.height = videoRef.videoHeight;
+		const width = videoRef.videoWidth;
+		const height = videoRef.videoHeight;
+
+		console.log('Setting canvas size to match video:', width, 'x', height);
+
+		const dpr = window.devicePixelRatio || 1;
+
+		// Set the canvas dimensions to match the video's intrinsic size
+		canvasRef.width = width * dpr;
+		canvasRef.height = height * dpr;
+
+		// Use CSS to control the displayed size
+		canvasRef.style.width = `${width}px`;
+		canvasRef.style.height = `${height}px`;
 	}
 
 	function startRender() {
@@ -188,6 +205,8 @@
 			const u_time = gl.getUniformLocation(program, 'u_time');
 
 			initCanvas();
+
+			gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
 			stopRendering = false;
 
@@ -256,7 +275,21 @@
 			capture();
 		}
 	}
+
+	function handleResize() {
+		if (stopRendering || !videoRef || !canvasRef) return;
+
+		// Re-initialize canvas size
+		initCanvas();
+
+		// Update WebGL viewport
+		if (gl) {
+			gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		}
+	}
 </script>
+
+<svelte:window onresize={handleResize} onorientationchange={handleResize} />
 
 <!-- Camera Preview Container -->
 <div class="relative overflow-hidden rounded-3xl border-8 border-white bg-white p-2 shadow-2xl">
