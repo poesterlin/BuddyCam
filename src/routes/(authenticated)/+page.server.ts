@@ -49,7 +49,8 @@ export const actions: Actions = {
 					fromId: locals.user.id,
 					matchId
 				} satisfies ReadyRequestData,
-				isTechnical: false
+				isTechnical: false,
+				persistent: true,
 			} satisfies typeof eventsTable.$inferInsert;
 		});
 
