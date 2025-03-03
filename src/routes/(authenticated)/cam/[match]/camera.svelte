@@ -29,7 +29,7 @@
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
 		if (shouldTrigger) {
-			capture();
+			takePicture();
 			shouldTrigger.clear();
 		}
 	});

@@ -35,7 +35,7 @@ void main() {
     
     // Simplified vignette
     if (u_vignetteAmount > 0.0) {
-        float vignette = 1.0 - smoothstep(0.3, 1.8, length(uv - 0.5) * 2.0);
+        float vignette = 1.0 - smoothstep(0.25, 1.8, length(uv - 0.5) * 2.0);
         color.rgb *= 1.0 - ((1.0 - vignette) * u_vignetteAmount);
     }
     

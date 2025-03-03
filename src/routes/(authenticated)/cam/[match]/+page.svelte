@@ -37,7 +37,7 @@
 </script>
 
 <div class="min-h-full bg-gradient-to-b from-pink-100 to-purple-200 p-6">
-	<div class="mx-auto max-w-lg">
+	<div class="main-content mx-auto">
 		<!-- Cute Header -->
 		<h1 class="mb-8 text-center font-bold">
 			<span
@@ -56,3 +56,9 @@
 		<p class="animate-pulse">💖 Made with love and sparkles 💖</p>
 	</div>
 </div>
+
+<style>
+	.main-content {
+		max-width: 90vw;
+	}
+</style>
