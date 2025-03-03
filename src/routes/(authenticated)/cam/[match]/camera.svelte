@@ -5,7 +5,7 @@
 	import { assert } from '$lib/client/util';
 	import { EventType } from '$lib/events';
 	import { IconToggleLeft, IconToggleRightFilled } from '@tabler/icons-svelte';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import FragmentShader from './fragment.glsl?raw';
 	import VertexShader from './vertex.glsl?raw';
 
