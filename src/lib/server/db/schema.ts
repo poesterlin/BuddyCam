@@ -60,7 +60,7 @@ export const eventsTable = pgTable(
 );
 
 export type Event<T = {}> = typeof eventsTable.$inferSelect & {
-	data: T & Record<string, unknown>;
+	data: T & Record<string, any>;
 };
 
 export const matchupTable = pgTable('matchup', {

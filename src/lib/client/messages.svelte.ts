@@ -5,7 +5,7 @@ import { source } from 'sveltekit-sse';
 import { toastStore } from './toast.svelte';
 
 // state rune to store new events
-const newEvents = $state<{ event: Event; clear: () => void }[]>([]);
+const newEvents = $state<{ event: Event<any>; clear: () => void }[]>([]);
 const count = $derived(newEvents.reduce((acc, { event }) => acc + (event.isTechnical ? 0 : 1), 0));
 
 export const events = {
@@ -63,18 +63,6 @@ export function initMessageChannel() {
 			event,
 			clear: () => events.clear(event.id)
 		}));
-
-		const startEvents = hydrated.filter((e) => e.event.type === EventType.START);
-		if (startEvents.length > 0) {
-			const last = startEvents.at(-1);
-			if (!last) {
-				return;
-			}
-
-			const data = last.event.data as StartData;
-			goto(`/cam/${data.matchId}`);
-			startEvents.forEach((e) => e.clear());
-		}
 
 		if (hydrated.length === 0) {
 			return;

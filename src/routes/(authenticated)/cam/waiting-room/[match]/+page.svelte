@@ -1,3 +1,18 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { events } from '$lib/client/messages.svelte';
+	import { EventType, type StartData } from '$lib/events';
+
+	$effect(() => {
+		const goNext = events.new.find(({ event }) => event.type === EventType.START);
+		if (goNext) {
+			const data = goNext.event.data as StartData;
+			goto(`/cam/${data.matchId}`);
+			goNext.clear();
+		}
+	});
+</script>
+
 <div
 	class="flex h-full items-center justify-center overflow-hidden bg-gradient-to-b from-pink-50 to-yellow-50"
 >
@@ -6,7 +21,7 @@
 		<p>Just a moment...</p>
 
 		<div class="relative flex justify-center">
-			<img src="/loading.gif" class="m-auto" />
+			<img src="/loading.gif" class="m-auto" alt="" />
 			<div
 				class="bounce absolute inset-0 m-auto h-8 w-8 translate-y-1 rounded-full bg-pink-200/50"
 			></div>
