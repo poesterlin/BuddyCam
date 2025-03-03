@@ -4,8 +4,9 @@ import postgres, { type Notification } from 'pg';
 import { z } from 'zod';
 import type { eventsTable } from './schema';
 import { EventStore } from '../store';
+import { building } from '$app/environment';
 
-if (!env.DATABASE_URL) {
+if (!env.DATABASE_URL || building) {
 	throw new Error('DATABASE_URL is not set');
 }
 
