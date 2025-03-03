@@ -4,10 +4,6 @@
 	import BaseEvent from './BaseEvent.svelte';
 
 	let { event, clear }: { event: Event<ReadyRequestData>; clear: () => void } = $props();
-
-	$effect(() => {
-		console.log('ReadyEvent', event);
-	});
 </script>
 
 <a href="/cam/waiting-room/{event.data.matchId}">

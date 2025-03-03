@@ -126,6 +126,11 @@
 				blob = await canvas.convertToBlob();
 			}
 
+			// stop video stream
+			if (stream) {
+				stream.getTracks().forEach((track) => track.stop());
+			}
+
 			upload(blob);
 		} catch (error) {
 			toastStore.show('Error uploading photo');

@@ -52,12 +52,6 @@ async function setupNotificationListener() {
 				const notification = JSON.parse(event.payload);
 				const parsed = schema.parse(notification);
 
-				console.log(
-					'Received notification:',
-					JSON.stringify(parsed.data, null, 4),
-					notification.data
-				);
-
 				const data = {
 					id: parsed.id,
 					type: parsed.type,
