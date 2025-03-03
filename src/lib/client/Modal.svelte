@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { IconX } from '@tabler/icons-svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { fly } from 'svelte/transition';
 	import { quintIn } from 'svelte/easing';
 
 	let dialogEl: HTMLDialogElement;
@@ -10,7 +10,7 @@
 		dialogEl.showModal();
 	});
 
-	const { close, children, title } = $props();
+	const { close, children, title, icon } = $props();
 
 	function onlySelf(fn: () => void) {
 		return (event: MouseEvent) => {
@@ -32,6 +32,11 @@
 >
 	<form method="dialog" onsubmit={close} class="relative overflow-hidden px-6 py-4">
 		<h1 class="text-lg font-bold text-rose-600">{title}</h1>
+
+		{#if icon}
+			{@render icon()}
+		{/if}
+
 		<button
 			type="button"
 			onclick={close}

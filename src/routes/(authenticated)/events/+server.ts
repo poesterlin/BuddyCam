@@ -86,6 +86,12 @@ export const DELETE: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
 	const { url } = event;
 
+	const all = url.searchParams.has('all');
+	if (all) {
+		await db.delete(eventsTable).where(eq(eventsTable.userId, locals.user.id));
+		return new Response(null, { status: 204 });
+	}
+
 	const id = z.string().parse(url.searchParams.get('id'));
 
 	await db

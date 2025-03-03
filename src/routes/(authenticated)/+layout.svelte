@@ -8,6 +8,7 @@
 	import { IconBell, IconUserCircle } from '@tabler/icons-svelte';
 	import DynamicEvent from '$lib/client/events/DynamicEvent.svelte';
 	import { slide } from 'svelte/transition';
+	import ClearAll from '@tabler/icons-svelte/icons/clear-all';
 
 	onMount(() => initMessageChannel());
 
@@ -22,8 +23,19 @@
 	}
 </script>
 
+{#snippet clearBtn()}
+	{#if events.new.length > 0}
+		<button
+			class="absolute top-5 right-12 text-gray-400 hover:text-gray-600 focus:outline-none"
+			onclick={events.clearAll}
+		>
+			<ClearAll class="h-6 w-6"></ClearAll>
+		</button>
+	{/if}
+{/snippet}
+
 {#if page.state.showNotifications}
-	<Modal title="Notifications" close={closeModal}>
+	<Modal title="Notifications" close={closeModal} icon={clearBtn}>
 		<ul class="m-4 flex flex-col gap-4">
 			{#each events.new as { event, clear }}
 				<DynamicEvent {event} {clear}></DynamicEvent>
@@ -46,7 +58,7 @@
 					>
 				</div>
 				<div class="ml-6 flex items-center gap-6">
-					<button class="btn btn-ghost btn-sm relative" onclick={showModal}>
+					<button class="relative" onclick={showModal}>
 						<IconBell class="text-amber-400"></IconBell>
 						{#if events.count > 0}
 							<span class="badge">{events.count}</span>
@@ -55,7 +67,7 @@
 
 					<a
 						href="/friends"
-						class="btn btn-ghost btn-sm text-lg text-amber-500"
+						class="text-lg text-amber-500"
 						aria-current={page.url.pathname === '/friends'}>Friends</a
 					>
 

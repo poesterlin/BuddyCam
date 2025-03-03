@@ -18,6 +18,12 @@ export const events = {
 			console.log('event cleared');
 		});
 	},
+	clearAll: () => {
+		newEvents.splice(0, newEvents.length);
+		fetch('/events?all', { method: 'DELETE' }).then(() => {
+			console.log('all events cleared');
+		});
+	},
 	get count() {
 		return count;
 	}
@@ -40,6 +46,11 @@ export function initMessageChannel() {
 			return;
 		}
 
+		const set = new Set<string>();
+		for (const { event } of newEvents) {
+			set.add(event.id);
+		}
+
 		let data: Event[] = [];
 		try {
 			data = JSON.parse(d) as Event[];
@@ -49,7 +60,6 @@ export function initMessageChannel() {
 		}
 
 		// dedupe
-		const set = new Set<string>();
 		data = data.filter((event) => {
 			if (set.has(event.id)) {
 				return false;
