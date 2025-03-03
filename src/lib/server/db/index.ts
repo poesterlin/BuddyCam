@@ -6,7 +6,7 @@ import type { eventsTable } from './schema';
 import { EventStore } from '../store';
 import { building } from '$app/environment';
 
-if (!env.DATABASE_URL || building) {
+if (!env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set');
 }
 
@@ -20,7 +20,9 @@ export const notificationClient = new postgres.Client({
 	connectionString: env.DATABASE_URL
 });
 
-setupNotificationListener();
+if (!building) {
+	setupNotificationListener();
+}
 
 async function setupNotificationListener() {
 	try {
