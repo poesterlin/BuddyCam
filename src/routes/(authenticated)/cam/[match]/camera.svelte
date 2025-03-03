@@ -235,11 +235,9 @@
 		fps: number;
 		second: number;
 	}) {
-		if (!useWebGl) {
+		if (!useWebGl || !videoRef) {
 			return;
 		}
-
-		assert(videoRef, 'Video element is null');
 
 		const currentSecond = Math.floor(Date.now() / 1000);
 		if (currentSecond !== data.second) {
