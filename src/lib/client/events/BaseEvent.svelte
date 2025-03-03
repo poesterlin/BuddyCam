@@ -18,6 +18,11 @@
 		minutes: minutes,
 		seconds: seconds
 	});
+
+	function clearEvent(e: MouseEvent) {
+		e.stopPropagation();
+		clear();
+	}
 </script>
 
 <li
@@ -43,7 +48,7 @@
 
 	<button
 		type="button"
-		onclick={clear}
+		onclick={clearEvent}
 		class="text-md py-3 text-rose-500 hover:text-gray-100 focus:outline-none"
 	>
 		Dismiss

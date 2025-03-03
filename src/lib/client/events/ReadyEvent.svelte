@@ -1,15 +1,17 @@
 <script lang="ts">
-	import type { FriendRequestData, ReadyRequestData } from '$lib/events';
+	import type { ReadyRequestData } from '$lib/events';
 	import type { Event } from '$lib/server/db/schema';
 	import BaseEvent from './BaseEvent.svelte';
 
-	let { event, clear }: { event: Event; clear: () => void } = $props();
+	let { event, clear }: { event: Event<ReadyRequestData>; clear: () => void } = $props();
 
-	let data = event.data as ReadyRequestData;
+	$effect(() => {
+		console.log('ReadyEvent', event);
+	});
 </script>
 
-<a href="/cam/waiting-room/{data.matchId}">
+<a href="/cam/waiting-room/{event.data.matchId}">
 	<BaseEvent {clear} {event}>
-		{data.fromUsername} is ready!
+		{event.data.fromUsername} is ready!
 	</BaseEvent>
 </a>

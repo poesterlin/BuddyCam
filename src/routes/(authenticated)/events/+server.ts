@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
+import { db, eventStore } from '$lib/server/db';
 import { eventsTable } from '$lib/server/db/schema';
 import { validateAuth } from '$lib/server/util';
 import type { RequestHandler } from '@sveltejs/kit';
-import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import { produce } from 'sveltekit-sse';
 import { z } from 'zod';
 
@@ -12,8 +12,29 @@ function delay(milliseconds: number) {
 	});
 }
 
-export const POST: RequestHandler = (event) => {
+export const GET: RequestHandler = () => {
+	const stats = eventStore.getStats();
+
+	return new Response(JSON.stringify(stats), {
+		headers: {
+			'content-type': 'application/json'
+		}
+	});
+};
+
+export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
+	eventStore.addUser(locals.user);
+
+	// clear all events for the user
+	await db
+		.delete(eventsTable)
+		.where(
+			and(
+				eq(eventsTable.userId, locals.user.id),
+				or(eq(eventsTable.persistent, false), eq(eventsTable.read, true))
+			)
+		);
 
 	return produce(async function start({ emit }) {
 		// send all persistent events that have not been read first
@@ -32,12 +53,12 @@ export const POST: RequestHandler = (event) => {
 		emit('message', JSON.stringify(persistent));
 
 		while (true) {
-			// send all new events
-			const events = await db
-				.select()
-				.from(eventsTable)
-				.where(and(eq(eventsTable.userId, locals.user.id), isNull(eventsTable.sendAt)))
-				.orderBy(eventsTable.createdAt);
+			const events = eventStore.getUserEvents(locals.user.id);
+
+			if (events.length === 0) {
+				await delay(50);
+				continue;
+			}
 
 			const { error } = emit('message', JSON.stringify(events));
 
@@ -56,7 +77,7 @@ export const POST: RequestHandler = (event) => {
 					)
 				);
 
-			await delay(1500);
+			await delay(50);
 		}
 	});
 };

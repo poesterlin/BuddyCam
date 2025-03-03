@@ -7,7 +7,7 @@
 	import Noop from './Noop.svelte';
 	import RegisterEvent from './RegisterEvent.svelte';
 
-	let { event, clear }: { clear: () => void; event: Event } = $props();
+	let { event, clear }: { clear: () => void; event: Event<any> } = $props();
 
 	let SelectedEvent = $derived(getEvent(event.type));
 

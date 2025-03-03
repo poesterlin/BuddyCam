@@ -3,11 +3,9 @@
 	import type { Event } from '$lib/server/db/schema';
 	import BaseEvent from './BaseEvent.svelte';
 
-	let { event, clear }: { event: Event; clear: () => void } = $props();
-
-	let data = event.data as DeleteMatchupData;
+	let { event, clear }: { event: Event<DeleteMatchupData>; clear: () => void } = $props();
 </script>
 
 <BaseEvent {clear} {event}>
-	{data.fromUsername} deleted the Results 🤷
+	{event.data.fromUsername} deleted the Results 🤷
 </BaseEvent>

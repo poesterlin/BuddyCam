@@ -59,7 +59,9 @@ export const eventsTable = pgTable(
 	(t) => [index().on(t.userId, t.sendAt)]
 );
 
-export type Event = typeof eventsTable.$inferSelect;
+export type Event<T = {}> = typeof eventsTable.$inferSelect & {
+	data: T & Record<string, unknown>;
+};
 
 export const matchupTable = pgTable('matchup', {
 	id: text('id').primaryKey(),

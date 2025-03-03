@@ -3,13 +3,11 @@
 	import type { Event } from '$lib/server/db/schema';
 	import BaseEvent from './BaseEvent.svelte';
 
-	let { event, clear }: { event: Event; clear: () => void } = $props();
-
-	let data = event.data as FriendRequestAcceptedData;
+	let { event, clear }: { event: Event<FriendRequestAcceptedData>; clear: () => void } = $props();
 </script>
 
 <a href="/friends" onclick={clear}>
 	<BaseEvent {clear} {event}>
-		{data.fromUsername} accepted your friend request
+		{event.data.fromUsername} accepted your friend request
 	</BaseEvent>
 </a>
