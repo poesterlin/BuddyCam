@@ -75,7 +75,7 @@ export class ImageVideoProcessor {
 			Math.max(img1Dims.width, img2Dims.width) / (img1Dims.height + img2Dims.height);
 
 		// Calculate how far each aspect ratio is from the "ideal" aspect ratio (16:9 = 1.778)
-		const idealAspectRatio = 9 / 16;
+		const idealAspectRatio = 1 / 1;
 		const horizontalDiff = Math.abs(horizontalAspectRatio - idealAspectRatio);
 		const verticalDiff = Math.abs(verticalAspectRatio - idealAspectRatio);
 
@@ -83,38 +83,66 @@ export class ImageVideoProcessor {
 		return horizontalDiff < verticalDiff ? MergeDirection.HORIZONTAL : MergeDirection.VERTICAL;
 	}
 
-	public async mergeSideBySide(image1: Buffer, image2: Buffer): Promise<Buffer> {
+
+	private async mergeSideBySide(
+		image1: Buffer,
+		image2: Buffer,
+	): Promise<Buffer> {
 		try {
 			const [img1Meta, img2Meta] = await Promise.all([
 				sharp(image1).metadata(),
-				sharp(image2).metadata()
+				sharp(image2).metadata(),
 			]);
 
-			if (!img1Meta.width || !img2Meta.width || !img1Meta.height || !img2Meta.height) {
+			if (
+				!img1Meta.width ||
+				!img2Meta.width ||
+				!img1Meta.height ||
+				!img2Meta.height
+			) {
 				throw new ImageProcessingError('Invalid image metadata');
 			}
 
-			const totalHeight = Math.max(img1Meta.height, img2Meta.height);
+			let resizedImage1 = image1;
+			let resizedImage2 = image2;
+			let newImg1Meta = img1Meta;
+			let newImg2Meta = img2Meta;
+
+			if (img1Meta.height !== img2Meta.height) {
+				if (img1Meta.height > img2Meta.height) {
+					resizedImage1 = await sharp(image1)
+						.resize({ height: img2Meta.height })
+						.toBuffer();
+					newImg1Meta = await sharp(resizedImage1).metadata();
+				} else {
+					resizedImage2 = await sharp(image2)
+						.resize({ height: img1Meta.height })
+						.toBuffer();
+					newImg2Meta = await sharp(resizedImage2).metadata();
+				}
+			}
+
+			const totalHeight = Math.max(newImg1Meta.height!, newImg2Meta.height!);
 
 			const outputBuffer = await sharp({
 				create: {
-					width: img1Meta.width + img2Meta.width,
+					width: newImg1Meta.width! + newImg2Meta.width!,
 					height: totalHeight,
 					channels: 4,
-					background: { r: 255, g: 255, b: 255, alpha: 1 }
-				}
+					background: { r: 255, g: 255, b: 255, alpha: 1 },
+				},
 			})
 				.composite([
 					{
-						input: image1,
+						input: resizedImage1,
 						left: 0,
-						top: Math.floor((totalHeight - img1Meta.height) / 2)
+						top: Math.floor((totalHeight - newImg1Meta.height!) / 2),
 					},
 					{
-						input: image2,
-						left: img1Meta.width,
-						top: Math.floor((totalHeight - img2Meta.height) / 2)
-					}
+						input: resizedImage2,
+						left: newImg1Meta.width,
+						top: Math.floor((totalHeight - newImg2Meta.height!) / 2),
+					},
 				])
 				.jpeg()
 				.toBuffer();
@@ -126,38 +154,64 @@ export class ImageVideoProcessor {
 		}
 	}
 
-	private async mergeTopAndBottom(image1: Buffer, image2: Buffer): Promise<Buffer> {
+	private async mergeTopAndBottom(
+		image1: Buffer,
+		image2: Buffer,
+	): Promise<Buffer> {
 		try {
 			const [img1Meta, img2Meta] = await Promise.all([
 				sharp(image1).metadata(),
-				sharp(image2).metadata()
+				sharp(image2).metadata(),
 			]);
 
-			if (!img1Meta.width || !img2Meta.width || !img1Meta.height || !img2Meta.height) {
+			if (
+				!img1Meta.width ||
+				!img2Meta.width ||
+				!img1Meta.height ||
+				!img2Meta.height
+			) {
 				throw new ImageProcessingError('Invalid image metadata');
 			}
 
-			const totalWidth = Math.max(img1Meta.width, img2Meta.width);
+			let resizedImage1 = image1;
+			let resizedImage2 = image2;
+			let newImg1Meta = img1Meta;
+			let newImg2Meta = img2Meta;
 
+			if (img1Meta.width !== img2Meta.width) {
+				if (img1Meta.width > img2Meta.width) {
+					resizedImage1 = await sharp(image1)
+						.resize({ width: img2Meta.width })
+						.toBuffer();
+					newImg1Meta = await sharp(resizedImage1).metadata();
+				} else {
+					resizedImage2 = await sharp(image2)
+						.resize({ width: img1Meta.width })
+						.toBuffer();
+					newImg2Meta = await sharp(resizedImage2).metadata();
+				}
+			}
+
+			const totalWidth = Math.max(newImg1Meta.width!, newImg2Meta.width!);
 			const outputBuffer = await sharp({
 				create: {
 					width: totalWidth,
-					height: img1Meta.height + img2Meta.height,
+					height: newImg1Meta.height! + newImg2Meta.height!,
 					channels: 4,
-					background: { r: 255, g: 255, b: 255, alpha: 1 }
-				}
+					background: { r: 255, g: 255, b: 255, alpha: 1 },
+				},
 			})
 				.composite([
 					{
-						input: image1,
-						left: Math.floor((totalWidth - img1Meta.width) / 2),
-						top: 0
+						input: resizedImage1,
+						left: Math.floor((totalWidth - newImg1Meta.width!) / 2),
+						top: 0,
 					},
 					{
-						input: image2,
-						left: Math.floor((totalWidth - img2Meta.width) / 2),
-						top: img1Meta.height
-					}
+						input: resizedImage2,
+						left: Math.floor((totalWidth - newImg2Meta.width!) / 2),
+						top: newImg1Meta.height,
+					},
 				])
 				.jpeg()
 				.toBuffer();
