@@ -65,7 +65,7 @@ export const POST: RequestHandler = async (event) => {
 				const { error } = emit('message', JSON.stringify(events));
 
 				if (error) {
-					console.error('Error sending event:', error);
+					console.error('Error sending event:', error, "user:", locals.user.username);
 					lock.set(false);
 					return;
 				}
