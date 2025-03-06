@@ -118,14 +118,11 @@ export class ImageVideoProcessor {
 			}
 
 			const totalHeight = Math.max(newImg1Meta.height!, newImg2Meta.height!);
-			const totalWidth = newImg1Meta.width! + newImg2Meta.width!;
-
-			const min = makeEven(Math.min(totalWidth, totalHeight));
 
 			const outputBuffer = await sharp({
 				create: {
-					width: min,
-					height: min,
+					width: makeEven(newImg1Meta.width! + newImg2Meta.width!),
+					height: makeEven(totalHeight),
 					channels: 4,
 					background: { r: 245, g: 231, b: 252, alpha: 1 },
 				},
@@ -134,12 +131,12 @@ export class ImageVideoProcessor {
 					{
 						input: resizedImage1,
 						left: 0,
-						top: Math.floor((min - newImg1Meta.height!) / 2),
+						top: Math.floor((totalHeight - newImg1Meta.height!) / 2),
 					},
 					{
 						input: resizedImage2,
-						left: min / 2,
-						top: Math.floor((min - newImg2Meta.height!) / 2),
+						left: newImg1Meta.width,
+						top: Math.floor((totalHeight - newImg2Meta.height!) / 2),
 					},
 				])
 				.jpeg()
@@ -191,14 +188,11 @@ export class ImageVideoProcessor {
 			}
 
 			const totalWidth = Math.max(newImg1Meta.width!, newImg2Meta.width!);
-			const totalHeight = newImg1Meta.height! + newImg2Meta.height!;
-
-			const min = makeEven(Math.min(totalWidth, totalHeight));
 
 			const outputBuffer = await sharp({
 				create: {
-					width: min,
-					height: min,
+					width: makeEven(totalWidth),
+					height: makeEven(newImg1Meta.height! + newImg2Meta.height!),
 					channels: 4,
 					background: { r: 245, g: 231, b: 252, alpha: 1 },
 				},
@@ -206,13 +200,13 @@ export class ImageVideoProcessor {
 				.composite([
 					{
 						input: resizedImage1,
-						left: Math.floor((min - newImg1Meta.width!) / 2),
+						left: Math.floor((totalWidth - newImg1Meta.width!) / 2),
 						top: 0,
 					},
 					{
 						input: resizedImage2,
-						left: Math.floor((min - newImg2Meta.width!) / 2),
-						top: min / 2,
+						left: Math.floor((totalWidth - newImg2Meta.width!) / 2),
+						top: newImg1Meta.height,
 					},
 				])
 				.jpeg()
@@ -250,15 +244,15 @@ export class ImageVideoProcessor {
 				.videoCodec('libx264')
 				.outputOptions(['-movflags frag_keyframe+empty_moov'])
 				.complexFilter([
-					{
-						filter: 'crop',
-						options: 'iw>ih ? ih:iw:iw>ih ? ih:iw', //crop=w:h:(ow-iw)/2:(oh-ih)/2
-					},
-					// The scale filter i		s needed after the crop filter to ensure that libx264 is able to encode the input
-					{
-						filter: 'scale',
-						options: 'trunc(iw/2)*2:trunc(ih/2)*2',
-					},
+				  {
+					filter: 'crop',
+					options: 'iw>ih ? ih:iw:iw>ih ? ih:iw', //crop=w:h:(ow-iw)/2:(oh-ih)/2
+				  },
+				  // The scale filter is needed after the crop filter to ensure that libx264 is able to encode the input
+				  {
+					filter: 'scale',
+					options: 'trunc(iw/2)*2:trunc(ih/2)*2',
+				  },
 				])
 				.on('start', (commandLine) => {
 					console.log('Spawned FFmpeg with command:', commandLine);
