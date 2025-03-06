@@ -56,13 +56,14 @@ export const POST: RequestHandler = async (event) => {
 			const events = eventStore.getUserEvents(locals.user.id);
 
 			if (events.length === 0) {
-				await delay(50);
+				await delay(100);
 				continue;
 			}
 
 			const { error } = emit('message', JSON.stringify(events));
 
 			if (error) {
+				console.error('Error sending event:', error);
 				return;
 			}
 
@@ -77,7 +78,7 @@ export const POST: RequestHandler = async (event) => {
 					)
 				);
 
-			await delay(50);
+			await delay(100);
 		}
 	});
 };
