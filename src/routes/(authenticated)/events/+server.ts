@@ -2,7 +2,7 @@ import { db, eventStore } from '$lib/server/db';
 import { eventsTable } from '$lib/server/db/schema';
 import { validateAuth } from '$lib/server/util';
 import type { RequestHandler } from '@sveltejs/kit';
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, lte, or } from 'drizzle-orm';
 import { produce } from 'sveltekit-sse';
 import { z } from 'zod';
 
@@ -26,13 +26,18 @@ export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
 	eventStore.addUser(locals.user);
 
+	const cutoffDate = new Date();
+	// clear all events for the user older than 1 day
+	cutoffDate.setDate(cutoffDate.getDate() - 1);
+
 	// clear all events for the user
 	await db
 		.delete(eventsTable)
 		.where(
 			and(
 				eq(eventsTable.userId, locals.user.id),
-				or(eq(eventsTable.persistent, false), eq(eventsTable.read, true))
+				or(eq(eventsTable.persistent, false), eq(eventsTable.read, true)),
+				lte(eventsTable.createdAt, cutoffDate)
 			)
 		);
 
@@ -102,7 +107,7 @@ export const DELETE: RequestHandler = async (event) => {
 	const id = z.string().parse(url.searchParams.get('id'));
 
 	await db
-		.update(eventsTable)
+		.update(eventsTable)		
 		.set({ read: true })
 		.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.id, id)));
 
