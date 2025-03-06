@@ -1,5 +1,3 @@
-import { goto } from '$app/navigation';
-import { EventType, type StartData } from '$lib/events';
 import type { Event } from '$lib/server/db/schema';
 import { source } from 'sveltekit-sse';
 import { toastStore } from './toast.svelte';
@@ -38,11 +36,19 @@ export function initMessageChannel() {
 		// reconnect on close
 		close({ connect }) {
 			connect();
-		}
+		},
+		error({ error }) {
+			console.error('Event stream error:', error);
+		},
+		open() {
+			console.log('Event stream connected');
+		},
+		cache: false
+
 	}).select('message');
 
-	return connection.subscribe((d?: string) => {
-		if (!d) {
+	return connection.subscribe((payload?: string) => {
+		if (!payload) {
 			return;
 		}
 
@@ -53,7 +59,7 @@ export function initMessageChannel() {
 
 		let data: Event[] = [];
 		try {
-			data = JSON.parse(d) as Event[];
+			data = JSON.parse(payload) as Event[];
 		} catch (error) {
 			console.error('Failed to parse event', error);
 			return;
