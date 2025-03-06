@@ -34,15 +34,11 @@ interface ProcessingOptions {
 
 export class ImageVideoProcessor {
 	private readonly outputDir = env.OUTPUT_DIR!;
-	private readonly videoOutput = 'output.mp4';
 	private readonly fps: number;
-	private readonly shouldCleanup: boolean;
 
-	constructor({ folder, fps = 24, cleanup = false }: ProcessingOptions) {
+	constructor({ folder, fps = 24 }: ProcessingOptions) {
 		this.outputDir = join(this.outputDir, folder);
-
 		this.fps = fps;
-		this.shouldCleanup = cleanup;
 	}
 
 	private async getImageDimensions(image: Buffer): Promise<ImageDimensions> {
@@ -246,7 +242,18 @@ export class ImageVideoProcessor {
 				.inputFPS(this.fps)
 				.format('mp4')
 				.videoCodec('libx264')
-				.outputOptions(['-movflags frag_keyframe+empty_moov']) // ensures streaming compatibility
+				.outputOptions(['-movflags frag_keyframe+empty_moov'])
+				.complexFilter([
+				  {
+					filter: 'crop',
+					options: 'iw>ih ? ih:iw:iw>ih ? ih:iw', //crop=w:h:(ow-iw)/2:(oh-ih)/2
+				  },
+				  // The scale filter is needed after the crop filter to ensure that libx264 is able to encode the input
+				  {
+					filter: 'scale',
+					options: 'trunc(iw/2)*2:trunc(ih/2)*2',
+				  },
+				])
 				.on('start', (commandLine) => {
 					console.log('Spawned FFmpeg with command:', commandLine);
 				})
