@@ -83,7 +83,6 @@ export class ImageVideoProcessor {
 		return horizontalDiff < verticalDiff ? MergeDirection.HORIZONTAL : MergeDirection.VERTICAL;
 	}
 
-
 	private async mergeSideBySide(
 		image1: Buffer,
 		image2: Buffer,
@@ -126,8 +125,8 @@ export class ImageVideoProcessor {
 
 			const outputBuffer = await sharp({
 				create: {
-					width: newImg1Meta.width! + newImg2Meta.width!,
-					height: totalHeight,
+					width: makeEven(newImg1Meta.width! + newImg2Meta.width!),
+					height: makeEven(totalHeight),
 					channels: 4,
 					background: { r: 255, g: 255, b: 255, alpha: 1 },
 				},
@@ -193,10 +192,11 @@ export class ImageVideoProcessor {
 			}
 
 			const totalWidth = Math.max(newImg1Meta.width!, newImg2Meta.width!);
+
 			const outputBuffer = await sharp({
 				create: {
-					width: totalWidth,
-					height: newImg1Meta.height! + newImg2Meta.height!,
+					width: makeEven(totalWidth),
+					height: makeEven(newImg1Meta.height! + newImg2Meta.height!),
 					channels: 4,
 					background: { r: 255, g: 255, b: 255, alpha: 1 },
 				},
@@ -306,4 +306,9 @@ class ImageProcessingError extends Error {
 		super(message);
 		this.name = 'ImageProcessingError';
 	}
+}
+
+
+function makeEven(value: number): number {
+	return value % 2 === 0 ? value : value + 1;
 }

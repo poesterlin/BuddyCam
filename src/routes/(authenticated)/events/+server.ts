@@ -75,7 +75,7 @@ export const POST: RequestHandler = async (event) => {
 					return;
 				}
 
-				// only remove the events if they were successfully sent
+				// only remove the events if they were successfully sent		
 				eventStore.removeEvents(events);
 
 				// update the sendAt field to the current time
@@ -110,7 +110,7 @@ export const DELETE: RequestHandler = async (event) => {
 	const id = z.string().parse(url.searchParams.get('id'));
 
 	await db
-		.update(eventsTable)		
+		.update(eventsTable)
 		.set({ read: true })
 		.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.id, id)));
 
