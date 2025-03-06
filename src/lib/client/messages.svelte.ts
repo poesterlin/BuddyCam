@@ -39,7 +39,7 @@ export function initMessageChannel() {
 		},
 		error({ error }) {
 			console.error('Event stream error:', error);
-		},
+		},		
 		open() {
 			console.log('Event stream connected');
 		},

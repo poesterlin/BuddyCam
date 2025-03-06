@@ -36,7 +36,8 @@ export const POST: RequestHandler = async (event) => {
 			)
 		);
 
-	return produce(async function start({ emit }) {
+	return produce(async function start({ emit, lock }) {
+
 		// send all persistent events that have not been read first
 		const persistent = await db
 			.select()
@@ -53,32 +54,37 @@ export const POST: RequestHandler = async (event) => {
 		emit('message', JSON.stringify(persistent));
 
 		while (true) {
-			const events = eventStore.getUserEvents(locals.user.id);
+			try {
+				const events = eventStore.getUserEvents(locals.user.id);
 
-			if (events.length === 0) {
+				if (events.length === 0) {
+					await delay(100);
+					continue;
+				}
+
+				const { error } = emit('message', JSON.stringify(events));
+
+				if (error) {
+					console.error('Error sending event:', error);
+					lock.set(false);
+					return;
+				}
+
+				// update the sendAt field to the current time
+				await db
+					.update(eventsTable)
+					.set({ sendAt: new Date() })
+					.where(
+						inArray(
+							eventsTable.id,
+							events.map((event) => event.id)
+						)
+					);
+
 				await delay(100);
-				continue;
+			} catch (error) {
+				console.error('Error in event stream:', error);
 			}
-
-			const { error } = emit('message', JSON.stringify(events));
-
-			if (error) {
-				console.error('Error sending event:', error);
-				return;
-			}
-
-			// update the sendAt field to the current time
-			await db
-				.update(eventsTable)
-				.set({ sendAt: new Date() })
-				.where(
-					inArray(
-						eventsTable.id,
-						events.map((event) => event.id)
-					)
-				);
-
-			await delay(100);
 		}
 	});
 };
