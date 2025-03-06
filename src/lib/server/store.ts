@@ -115,11 +115,13 @@ export class EventStore {
 
 		const events = Array.from(userEventMap.values());
 
-		for (const event of events) {
-			this.removeEvent(event.id, userId);
-		}
-
 		return events;
+	}
+
+	public removeEvents(events: Event[]): void {
+		for (const event of events) {
+			this.removeEvent(event.id, event.userId);
+		}
 	}
 
 	/**

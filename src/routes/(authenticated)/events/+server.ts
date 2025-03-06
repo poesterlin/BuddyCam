@@ -75,6 +75,9 @@ export const POST: RequestHandler = async (event) => {
 					return;
 				}
 
+				// only remove the events if they were successfully sent
+				eventStore.removeEvents(events);
+
 				// update the sendAt field to the current time
 				await db
 					.update(eventsTable)
