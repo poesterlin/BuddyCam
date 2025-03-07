@@ -45,16 +45,16 @@ function buildEvent(event: DbEvent) {
 			return {
 				title: 'Ready!',
 				body: `${event.data.fromUsername} is ready!`,
-				actions: [
-					{ action: 'accept', title: 'Open', openUrl: `/cam/waiting-room/${event.data.matchId}` }
-				]
+				// actions: [
+				// { action: 'accept', title: 'Open', openUrl: `/cam/waiting-room/${event.data?.matchId}` }
+				// ],
 			};
 
 		case EventType.FRIEND_REQUEST:
 			return {
 				title: 'Friend Request',
 				body: `${event.data.fromUsername} wants to be your friend!`,
-				actions: [{ action: 'accept', title: 'Open', openUrl: `/friends` }]
+				// actions: [{ action: 'accept', title: 'Open', openUrl: `/friends` }],
 			};
 
 		case EventType.SUBSCRIPTION:
