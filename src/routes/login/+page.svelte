@@ -22,6 +22,7 @@
 						type="text"
 						id="username"
 						name="username"
+						autocomplete="username"
 						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 						placeholder="Your username"
 						required
@@ -36,6 +37,7 @@
 						type="password"
 						id="password"
 						name="password"
+						autocomplete="current-password"
 						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 						placeholder="••••••••"
 						required
