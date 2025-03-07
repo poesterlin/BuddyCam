@@ -23,6 +23,16 @@ export const sessionTable = pgTable('session', {
 
 export type Session = typeof sessionTable.$inferSelect;
 
+export const subscriptionsTable = pgTable('subscription', {
+	id: text('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => usersTable.id, fullCascade),
+	endpoint: text('endpoint').notNull(),
+	expirationTime: timestamp('expiration_time', { withTimezone: true, mode: 'date' }),
+	keys: json('keys').notNull()
+});
+
 export const friendsTable = pgTable(
 	'friend',
 	{

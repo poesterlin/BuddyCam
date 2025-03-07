@@ -29,7 +29,7 @@ export const POST: RequestHandler = async (event) => {
 	// clear all impersistant events older than 1 hour
 	const cutoffDate = new Date();
 	cutoffDate.setHours(cutoffDate.getHours() - 1);
-
+			
 	await db
 		.delete(eventsTable)
 		.where(

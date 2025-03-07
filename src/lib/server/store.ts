@@ -1,17 +1,5 @@
 import type { Event, User } from './db/schema';
-
-/**
- * TODO: Implement this function to send a push notification to a user
- */
-export async function sendPushNotification(userId: string, event: Event): Promise<boolean> {
-	// Log the email for testing purposes
-	console.log(`Sending push notification to user ${userId} for event ${event.id}`);
-
-	// Simulate network delay
-	await new Promise((resolve) => setTimeout(resolve, 100));
-
-	return true; // Assume success
-}
+import { sendPushNotification } from './push';
 
 export class EventStore {
 	// Map of user ID to their events
@@ -76,7 +64,7 @@ export class EventStore {
 			// Remove the event
 			this.removeEvent(eventId, userId);
 
-			// Send email
+			// Send push notification
 			await sendPushNotification(userId, event);
 		} catch (error) {
 			console.error(`Failed to process event ${eventId} for user ${userId}:`, error);

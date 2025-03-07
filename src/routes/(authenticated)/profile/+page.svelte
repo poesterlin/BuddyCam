@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { IconUserCircle } from '@tabler/icons-svelte';
+	import {
+		IconBell,
+		IconBellRingingFilled,
+		IconCirclePlus,
+		IconUserCircle
+	} from '@tabler/icons-svelte';
 
 	let { data } = $props();
 	let user = data.user;
@@ -13,6 +18,24 @@
 	function formatDate(d: string | Date) {
 		return intl.format(new Date(d));
 	}
+
+	async function addNotification() {
+		const publicVapidKey = import.meta.VITE_VAPID_PUBLIC;
+
+		const registration = await navigator.serviceWorker.ready;
+		const subscription = await registration.pushManager.subscribe({
+			userVisibleOnly: true,
+			applicationServerKey: publicVapidKey
+		});
+
+		await fetch('/profile?/addPushSubscription', {
+			method: 'POST',
+			body: JSON.stringify(subscription.toJSON()),
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+	}
 </script>
 
 <div
@@ -22,6 +45,19 @@
 		<IconUserCircle class="mx-auto h-24 w-24 text-rose-500"></IconUserCircle>
 
 		<h1 class="text-4xl font-extrabold text-rose-500 drop-shadow-md">{user.username} 💖</h1>
+
+		<!-- notifications -->
+		<div class="flex items-center justify-center gap-2 rounded-full bg-gray-100 p-2">
+			<button onclick={addNotification}>
+				<span class="mr-2">Enable Notifications for this Device</span>
+				<IconCirclePlus class="border-r-2 border-gray-200 text-rose-500"></IconCirclePlus>
+			</button>
+			{#if data.hasNotifications}
+				<IconBellRingingFilled></IconBellRingingFilled>
+			{:else}
+				<IconBell></IconBell>
+			{/if}
+		</div>
 
 		<p class="text-lg text-gray-700">
 			Email:
