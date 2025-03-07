@@ -25,9 +25,13 @@ export async function sendPushNotification(userId: string, event: Event) {
 			and(eq(subscriptionsTable.userId, userId), lte(subscriptionsTable.expirationTime, new Date()))
 		);
 
-	const payload = JSON.stringify({ event });
-	let success = false;
+	if (!subscriptions.length) {
+		return true;
+	}
 
+	const payload = JSON.stringify({ event });
+
+	let success = false;
 	for (const subscription of subscriptions) {
 		const result = await webpush.sendNotification(
 			{
