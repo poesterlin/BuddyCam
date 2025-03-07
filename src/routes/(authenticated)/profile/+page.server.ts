@@ -44,44 +44,4 @@ export const actions: Actions = {
 	logout: async (event) => {
 		validateAuth(event);
 	},
-
-	addPushSubscription: async (event) => {
-		const locals = validateAuth(event);
-		const { request } = event;
-
-		const json = await request.json();
-		const schema = z.object({
-			endpoint: z.string(),
-			expirationTime: z.string().optional(),
-			keys: z.object({
-				p256dh: z.string(),
-				auth: z.string()
-			})
-		});
-
-		const { endpoint, keys, expirationTime } = schema.parse(json);;
-
-		if (expirationTime && new Date(expirationTime) < new Date()) {
-			return { success: false, message: 'Expiration time must be in the future' };
-		}
-
-		// delete any existing subscription
-		await db
-			.delete(subscriptionsTable)
-			.where(and(
-				eq(subscriptionsTable.userId, locals.user.id),
-				eq(subscriptionsTable.endpoint, endpoint)
-			));
-
-		// insert the new subscription
-		await db
-			.insert(subscriptionsTable)
-			.values({
-				id: generateId(),
-				userId: locals.user.id,
-				endpoint,
-				keys,
-				expirationTime: expirationTime ? new Date(expirationTime) : undefined
-			});
-	},
 };

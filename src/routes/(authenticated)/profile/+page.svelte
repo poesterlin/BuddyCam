@@ -1,10 +1,7 @@
 <script lang="ts">
-	import {
-		IconBell,
-		IconBellRingingFilled,
-		IconCirclePlus,
-		IconUserCircle
-	} from '@tabler/icons-svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { env } from '$env/dynamic/public';
+	import { IconBell, IconBellRingingFilled, IconUserCircle } from '@tabler/icons-svelte';
 
 	let { data } = $props();
 	let user = data.user;
@@ -20,7 +17,7 @@
 	}
 
 	async function addNotification() {
-		const publicVapidKey = import.meta.VITE_VAPID_PUBLIC;
+		const publicVapidKey = env.PUBLIC_VAPID_KEY;
 
 		const registration = await navigator.serviceWorker.ready;
 		const subscription = await registration.pushManager.subscribe({
@@ -28,13 +25,12 @@
 			applicationServerKey: publicVapidKey
 		});
 
-		await fetch('/profile?/addPushSubscription', {
+		await fetch('/profile/notification', {
 			method: 'POST',
-			body: JSON.stringify(subscription.toJSON()),
-			headers: {
-				'Content-Type': 'application/json'
-			}
+			body: JSON.stringify(subscription.toJSON())
 		});
+
+		invalidateAll();
 	}
 </script>
 
@@ -47,17 +43,19 @@
 		<h1 class="text-4xl font-extrabold text-rose-500 drop-shadow-md">{user.username} 💖</h1>
 
 		<!-- notifications -->
-		<div class="flex items-center justify-center gap-2 rounded-full bg-gray-100 p-2">
-			<button onclick={addNotification}>
-				<span class="mr-2">Enable Notifications for this Device</span>
-				<IconCirclePlus class="border-r-2 border-gray-200 text-rose-500"></IconCirclePlus>
-			</button>
+		<button
+			class="mx-auto mb-12 flex items-center justify-center gap-4 rounded-full bg-gradient-to-l from-rose-400 to-amber-400 px-6 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
+			onclick={addNotification}
+		>
+			<span> Enable Notifications</span>
 			{#if data.hasNotifications}
 				<IconBellRingingFilled></IconBellRingingFilled>
 			{:else}
-				<IconBell></IconBell>
+				<div class="wiggle">
+					<IconBell></IconBell>
+				</div>
 			{/if}
-		</div>
+		</button>
 
 		<p class="text-lg text-gray-700">
 			Email:
@@ -71,21 +69,21 @@
 			Last Login:
 			<span class="font-semibold">{user.lastLogin ? formatDate(user.lastLogin!) : 'Never'}</span>
 		</p>
-		<p class="text-lg text-gray-700">
+		<p class="mb-12 text-lg text-gray-700">
 			Created At: <span class="font-semibold">{formatDate(user.createdAt)}</span>
 		</p>
 
-		<div class="flex flex-col space-y-4">
+		<div class="flex flex-col space-y-8">
 			<form method="POST" action="/logout">
 				<button
-					class="rounded-full bg-gradient-to-l from-rose-400 to-amber-400 px-6 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
+					class="rounded-full bg-white px-6 py-3 font-semibold tracking-wider text-rose-500 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
 					type="submit">Logout ✨</button
 				>
 			</form>
 
 			<form action="?/delete" method="POST">
 				<button
-					class="rounded-full bg-white px-6 py-3 font-semibold tracking-wider text-rose-500 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
+					class="rounded-full bg-red-400 px-4 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
 					type="submit"
 				>
 					Delete Account 🥺</button
@@ -98,5 +96,37 @@
 <style>
 	.card {
 		max-width: 95vw;
+	}
+
+	button {
+		.wiggle {
+			@starting-style {
+				animation: wiggle 0.5s forwards 2;
+			}
+		}
+
+		&:hover {
+			.wiggle {
+				animation: wiggle 0.5s infinite;
+			}
+		}
+	}
+
+	@keyframes wiggle {
+		0% {
+			transform: rotate(0deg);
+		}
+		25% {
+			transform: rotate(6deg);
+		}
+		50% {
+			transform: rotate(-4deg);
+		}
+		75% {
+			transform: rotate(5deg);
+		}
+		100% {
+			transform: rotate(0deg);
+		}
 	}
 </style>

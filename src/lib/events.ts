@@ -7,7 +7,8 @@ export enum EventType {
 	START = 'START',
 	CAPTURE = 'CAPTURE',
 	UPLOAD = 'UPLOAD',
-	DELETE_MATCHUP = 'DELETE_MATCHUP'
+	DELETE_MATCHUP = 'DELETE_MATCHUP',
+	SUBSCRIPTION = 'SUBSCRIPTION',
 }
 
 export interface FriendRequestData {
