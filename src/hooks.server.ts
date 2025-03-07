@@ -23,3 +23,9 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 };
 
 export const handle: Handle = handleAuth;
+
+// global error handler
+process.on('unhandledRejection', (error) => {
+	console.error('Unhandled rejection:', error);
+	process.exit(1);
+});
