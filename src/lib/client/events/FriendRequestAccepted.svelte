@@ -6,8 +6,6 @@
 	let { event, clear }: { event: Event<FriendRequestAcceptedData>; clear: () => void } = $props();
 </script>
 
-<a href="/friends" onclick={clear}>
-	<BaseEvent {clear} {event}>
-		{event.data.fromUsername} accepted your friend request
-	</BaseEvent>
-</a>
+<BaseEvent {clear} {event} link="/friends">
+	{event.data.fromUsername} accepted your friend request
+</BaseEvent>

@@ -6,8 +6,6 @@
 	let { event, clear }: { event: Event<ReadyRequestData>; clear: () => void } = $props();
 </script>
 
-<a href="/cam/waiting-room/{event.data.matchId}">
-	<BaseEvent {clear} {event}>
-		{event.data.fromUsername} is ready!
-	</BaseEvent>
-</a>
+<BaseEvent {clear} {event} link="/cam/waiting-room/{event.data.matchId}">
+	{event.data.fromUsername} is ready!
+</BaseEvent>
