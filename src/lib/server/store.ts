@@ -1,3 +1,4 @@
+import { assert } from '$lib/client/util';
 import type { Event, User } from './db/schema';
 import { sendPushNotification } from './push';
 
@@ -30,7 +31,7 @@ export class EventStore {
 		const userEventMap = this.userEvents.get(event.userId)!;
 		userEventMap.set(event.id, event);
 
-		// Set timeout to send email
+		// Set timeout to send notification
 		const timeoutId = setTimeout(() => {
 			this.processEvent(event.id, event.userId);
 		}, 10_000); // 10 seconds
@@ -42,7 +43,7 @@ export class EventStore {
 	}
 
 	/**
-	 * Process an event - send email and remove from store
+	 * Process an event - send notification and remove from store
 	 */
 	private async processEvent(eventId: string, userId: string): Promise<void> {
 		const userEventMap = this.userEvents.get(userId);
@@ -61,11 +62,12 @@ export class EventStore {
 		}
 
 		try {
+			// Send push notification
+			const success = await sendPushNotification(userId, event);
+			assert(success, 'Failed to send push notification');
+
 			// Remove the event
 			this.removeEvent(eventId, userId);
-
-			// Send push notification
-			await sendPushNotification(userId, event);
 		} catch (error) {
 			console.error(`Failed to process event ${eventId} for user ${userId}:`, error);
 		}
