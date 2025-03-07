@@ -29,30 +29,23 @@ export const POST: RequestHandler = async (event) => {
 	// clear all impersistant events older than 1 hour
 	const cutoffDate = new Date();
 	cutoffDate.setHours(cutoffDate.getHours() - 1);
-			
+
 	await db
 		.delete(eventsTable)
 		.where(
 			and(
 				eq(eventsTable.userId, locals.user.id),
 				eq(eventsTable.persistent, false),
-				lte(eventsTable.createdAt, cutoffDate),
+				lte(eventsTable.createdAt, cutoffDate)
 			)
 		);
 
 	// clear all read events
 	await db
 		.delete(eventsTable)
-		.where(
-			and(
-				eq(eventsTable.userId, locals.user.id),
-				eq(eventsTable.read, true),
-			)
-		);
-
+		.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.read, true)));
 
 	return produce(async function start({ emit, lock }) {
-
 		// send all persistent events that have not been read first
 		const persistent = await db
 			.select()
@@ -80,12 +73,12 @@ export const POST: RequestHandler = async (event) => {
 				const { error } = emit('message', JSON.stringify(events));
 
 				if (error) {
-					console.error('Error sending event:', error, "user:", locals.user.username);
+					console.error('Error sending event:', error, 'user:', locals.user.username);
 					lock.set(false);
 					return;
 				}
 
-				// only remove the events if they were successfully sent		
+				// only remove the events if they were successfully sent
 				eventStore.removeEvents(events);
 
 				// update the sendAt field to the current time
@@ -98,11 +91,10 @@ export const POST: RequestHandler = async (event) => {
 							events.map((event) => event.id)
 						)
 					);
-
-				await delay(100);
 			} catch (error) {
 				console.error('Error in event stream:', error);
 			}
+			await delay(100);
 		}
 	});
 };
