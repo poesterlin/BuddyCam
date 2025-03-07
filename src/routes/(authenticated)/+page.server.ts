@@ -57,5 +57,6 @@ export const actions: Actions = {
 		await db.insert(eventsTable).values(notifications);
 
 		redirect(302, '/cam/waiting-room/' + matchId);
-	}
+	},
+	default: () => { }
 };
