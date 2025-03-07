@@ -26,20 +26,30 @@ export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
 	eventStore.addUser(locals.user);
 
+	// clear all impersistant events older than 1 hour
 	const cutoffDate = new Date();
-	// clear all events for the user older than 1 day
-	cutoffDate.setDate(cutoffDate.getDate() - 1);
+	cutoffDate.setHours(cutoffDate.getHours() - 1);
 
-	// clear all events for the user
 	await db
 		.delete(eventsTable)
 		.where(
 			and(
 				eq(eventsTable.userId, locals.user.id),
-				or(eq(eventsTable.persistent, false), eq(eventsTable.read, true)),
-				lte(eventsTable.createdAt, cutoffDate)
+				eq(eventsTable.persistent, false),
+				lte(eventsTable.createdAt, cutoffDate),
 			)
 		);
+
+	// clear all read events
+	await db
+		.delete(eventsTable)
+		.where(
+			and(
+				eq(eventsTable.userId, locals.user.id),
+				eq(eventsTable.read, true),
+			)
+		);
+
 
 	return produce(async function start({ emit, lock }) {
 
