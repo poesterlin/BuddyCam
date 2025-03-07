@@ -64,10 +64,17 @@ export class EventStore {
 		try {
 			// Send push notification
 			const success = await sendPushNotification(userId, event);
-			assert(success, 'Failed to send push notification');
+
+			if (!success) {
+				console.error(`Failed to send push notification for event ${eventId} to user ${userId}`);
+				// retry
+				this.recordEvent(event);
+				return;
+			}
 
 			// Remove the event
 			this.removeEvent(eventId, userId);
+			console.log(`Processed event ${eventId} for user ${userId}`);
 		} catch (error) {
 			console.error(`Failed to process event ${eventId} for user ${userId}:`, error);
 		}
