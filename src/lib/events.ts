@@ -8,7 +8,7 @@ export enum EventType {
 	CAPTURE = 'CAPTURE',
 	UPLOAD = 'UPLOAD',
 	DELETE_MATCHUP = 'DELETE_MATCHUP',
-	SUBSCRIPTION = 'SUBSCRIPTION',
+	SUBSCRIPTION = 'SUBSCRIPTION'
 }
 
 export interface FriendRequestData {
@@ -25,7 +25,10 @@ export interface StartData {
 	matchId: string;
 }
 
-export type CaptureData = StartData;
+export interface CaptureData extends StartData {
+	timestamp: number;
+}
+
 export type UploadData = StartData;
 export interface DeleteMatchupData extends StartData {
 	fromUsername: string;

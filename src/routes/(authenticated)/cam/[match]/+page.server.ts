@@ -1,13 +1,12 @@
-import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
-import { z } from 'zod';
-import type { Actions } from './$types';
-import { uploadFile } from '$lib/server/s3';
-import type { PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { eventsTable, filesTable, matchupTable, usersTable } from '$lib/server/db/schema';
-import { and, eq, or } from 'drizzle-orm';
-import { redirect } from '@sveltejs/kit';
 import { EventType, type CaptureData, type UploadData } from '$lib/events';
+import { db } from '$lib/server/db';
+import { eventsTable, filesTable, matchupTable } from '$lib/server/db/schema';
+import { uploadFile } from '$lib/server/s3';
+import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
+import { redirect } from '@sveltejs/kit';
+import { and, eq, or } from 'drizzle-orm';
+import { z } from 'zod';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -67,24 +66,6 @@ export const actions: Actions = {
 			assert(matchup, 404, 'match not found');
 			assert(matchup.friendId, 400, 'friend has not joined yet');
 
-			const files = await db.select().from(filesTable).where(eq(filesTable.matchupId, match));
-
-			const other = user.id === matchup.userId ? matchup.friendId : matchup.userId;
-
-			if (files.length === 0) {
-				// add capture event
-				await db.insert(eventsTable).values({
-					id: generateId(),
-					type: EventType.CAPTURE,
-					userId: other,
-					createdAt: new Date(),
-					isTechnical: true,
-					data: {
-						matchId: match
-					} satisfies CaptureData
-				});
-			}
-
 			const id = generateId();
 			await db.insert(filesTable).values({
 				id,
@@ -93,9 +74,8 @@ export const actions: Actions = {
 				matchupId: match
 			});
 
-			await uploadFile(id, form.photo);
+			const other = user.id === matchup.userId ? matchup.friendId : matchup.userId;
 
-			// add upload event
 			await db.insert(eventsTable).values([
 				{
 					id: generateId(),
@@ -119,7 +99,56 @@ export const actions: Actions = {
 				}
 			]);
 
+			await uploadFile(id, form.photo);
+
 			redirect(302, '/friends/result/' + match);
 		}
-	)
+	),
+	schedule: async (event) => {
+		const locals = validateAuth(event);
+		const { user } = locals;
+
+		const { match } = event.params;
+		const [matchup] = await db
+			.select()
+			.from(matchupTable)
+			.where(
+				and(
+					eq(matchupTable.id, match),
+					or(eq(matchupTable.friendId, user.id), eq(matchupTable.userId, user.id))
+				)
+			)
+			.limit(1);
+
+		assert(matchup, 404, 'match not found');
+		assert(matchup.friendId, 400, 'friend has not joined yet');
+
+		const delay = 1000 * 4;
+		const timestamp = Date.now() + delay;
+
+		await db.insert(eventsTable).values([
+			{
+				id: generateId(),
+				type: EventType.CAPTURE,
+				userId: matchup.friendId,
+				createdAt: new Date(),
+				isTechnical: true,
+				data: {
+					matchId: match,
+					timestamp
+				} satisfies CaptureData
+			},
+			{
+				id: generateId(),
+				type: EventType.CAPTURE,
+				userId: matchup.userId,
+				createdAt: new Date(),
+				isTechnical: true,
+				data: {
+					matchId: match,
+					timestamp
+				} satisfies CaptureData
+			}
+		]);
+	}
 };

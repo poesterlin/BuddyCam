@@ -3,11 +3,12 @@
 	import { events } from '$lib/client/messages.svelte';
 	import { toastStore } from '$lib/client/toast.svelte';
 	import { assert } from '$lib/client/util';
-	import { EventType } from '$lib/events';
+	import { EventType, type CaptureData } from '$lib/events';
 	import { IconToggleLeft, IconToggleRightFilled } from '@tabler/icons-svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import FragmentShader from './fragment.glsl?raw';
 	import VertexShader from './vertex.glsl?raw';
+	import { enhance } from '$app/forms';
 
 	let videoRef: HTMLVideoElement;
 	let canvasRef: HTMLCanvasElement;
@@ -22,6 +23,8 @@
 	let useWebGl = $state(false);
 	let webglSupported = $state(false);
 	let videoSize = $state({ width: 640, height: 480 });
+	let timestamp = $state(0);
+	let now = $state(0);
 
 	let stopRendering = false;
 	let shouldCapture = false;
@@ -29,18 +32,32 @@
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
 		if (shouldTrigger) {
-			takePicture();
+			// set timestamp to trigger image capture
+			const data = shouldTrigger.event.data as CaptureData;
+			timestamp = data.timestamp;
+
+			const timeRemaining = timestamp - now;
+			setTimeout(() => {
+				takePicture();
+			}, timeRemaining);
+
 			shouldTrigger.clear();
 		}
 	});
 
-	onMount(async () => {
+	onMount(() => {
 		gl = canvasRef.getContext('webgl2');
 		webglSupported = !!gl;
 		useWebGl = webglSupported;
 
-		availableCameras = await getAvailableCameras();
-		await initializeCamera();
+		const initCams = async () => {
+			availableCameras = await getAvailableCameras();
+			await initializeCamera();
+		};
+
+		initCams();
+
+		return startTimeUpdateLoop();
 	});
 
 	onDestroy(() => {
@@ -288,6 +305,17 @@
 			gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		}
 	}
+
+	function startTimeUpdateLoop() {
+		now = Date.now();
+
+		// Update time every second
+		const interval = setInterval(() => {
+			now = Date.now();
+		}, 1000);
+
+		return () => clearInterval(interval);
+	}
 </script>
 
 <svelte:window onresize={handleResize} onorientationchange={handleResize} />
@@ -296,7 +324,7 @@
 <div class="relative overflow-hidden rounded-3xl border-8 border-white bg-white p-2 shadow-2xl">
 	{#if webglSupported}
 		<button
-			class="absolute top-4 right-4 z-10 rounded-full bg-white p-2 shadow-md hover:shadow-lg focus:ring-0 focus:outline-none"
+			class="absolute right-4 top-4 z-10 rounded-full bg-white p-2 shadow-md hover:shadow-lg focus:outline-none focus:ring-0"
 			onclick={() => {
 				useWebGl = !useWebGl;
 				startRender();
@@ -333,13 +361,12 @@
 		class:hidden={!useWebGl}
 	></canvas>
 
-	<!-- Loading Overlay -->
-	{#if isUploading}
-		<div class="absolute inset-0 flex items-center justify-center bg-white/80">
-			<div class="text-center">
-				<div class="animate-bounce text-4xl">📤</div>
-				<p class="mt-2 font-bold text-pink-500">Uploading...</p>
-			</div>
+	<!-- Countdown Overlay -->
+	{#if timestamp && timestamp - now > 0}
+		<div class="absolute inset-0 flex items-center justify-center bg-white/10">
+			<span class="animate-bounce text-4xl">
+				{Math.ceil((timestamp - now) / 1000)}
+			</span>
 		</div>
 	{/if}
 </div>
@@ -347,17 +374,15 @@
 <!-- Controls -->
 <div class="mt-8 flex flex-col items-center gap-4">
 	<!-- Capture Button -->
-	<button
-		onclick={takePicture}
-		disabled={isUploading}
-		class="relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:scale-110 hover:rotate-3 hover:brightness-120 hover:before:opacity-100 focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-	>
-		{#if isUploading}
-			📤 Uploading...
-		{:else}
-			📸 Capture!
-		{/if}
-	</button>
+	<form action="?/schedule" method="POST" use:enhance>
+		<input type="hidden" name="type" value="capture" />
+		<button
+			type="submit"
+			class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			📸 Smile!
+		</button>
+	</form>
 
 	<!-- Switch Camera Button - Only shown if multiple cameras are available -->
 	{#if availableCameras.length > 1}
