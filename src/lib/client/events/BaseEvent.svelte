@@ -39,7 +39,9 @@
 	class="flex items-center justify-between rounded-xl bg-gradient-to-br from-purple-500 to-teal-500 p-4 text-white shadow-sm transition-shadow duration-200 hover:shadow-md"
 >
 	{#if link}
-		<a href={link} class="flex items-center py-3"> {@render content()} </a>
+		<a href={link} class="flex items-center py-3" data-sveltekit-preload-data="tap">
+			{@render content()}
+		</a>
 	{:else}
 		<div class="flex items-center py-3">{@render content()}</div>
 	{/if}
