@@ -36,7 +36,7 @@
 			const data = shouldTrigger.event.data as CaptureData;
 			timestamp = data.timestamp;
 
-			const timeRemaining = timestamp - now;
+			const timeRemaining = Math.max(timestamp - now, 300);
 			setTimeout(() => {
 				takePicture();
 			}, timeRemaining);

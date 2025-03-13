@@ -22,9 +22,9 @@ export const load: PageServerLoad = async (event) => {
 	assert(matchup, 404, 'Match not found');
 
 	const isMine = matchup.userId === locals.user.id;
-	const isUnassigned = matchup.friendId === undefined || matchup.friendId === null;
+	const isUnassigned = !isMine && (matchup.friendId === undefined || matchup.friendId === null);
 
-	if (!isMine && isUnassigned) {
+	if (isUnassigned) {
 		await db
 			.update(matchupTable)
 			.set({ friendId: locals.user.id })
@@ -34,14 +34,6 @@ export const load: PageServerLoad = async (event) => {
 		await db.insert(eventsTable).values([
 			{
 				id: generateId(),
-				userId: locals.user.id,
-				type: EventType.START,
-				createdAt: new Date(),
-				isTechnical: true,
-				data: { matchId: match } satisfies StartData
-			},
-			{
-				id: generateId(),
 				userId: matchup.userId,
 				type: EventType.START,
 				createdAt: new Date(),
@@ -49,7 +41,7 @@ export const load: PageServerLoad = async (event) => {
 				data: { matchId: match } satisfies StartData
 			}
 		]);
-	} else {
+
 		redirect(302, `/cam/${match}`);
 	}
 };
