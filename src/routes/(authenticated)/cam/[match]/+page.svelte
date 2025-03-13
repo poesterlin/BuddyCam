@@ -6,20 +6,20 @@
 	import { onMount } from 'svelte';
 
 	let { data } = $props();
+	let isUploading = $state(false);
+	let timeDiff = $state(0);
 
 	onMount(() => {
 		const now = new Date();
 		const serverNow = new Date(data.now);
-		const diff = now.getTime() - serverNow.getTime();
+		timeDiff = now.getTime() - serverNow.getTime();
 
-		if (diff < 0) {
-			console.log('Server time is ahead of client time by', -diff, 'ms');
+		if (timeDiff < 0) {
+			console.log('Server time is ahead of client time by', -timeDiff, 'ms');
 		} else {
-			console.log('Client time is ahead of server time by', diff, 'ms');
+			console.log('Client time is ahead of server time by', timeDiff, 'ms');
 		}
 	});
-
-	let isUploading = $state(false);
 
 	async function upload(blob: Blob) {
 		try {
@@ -63,7 +63,7 @@
 			<span class="mt-2 block text-lg text-pink-400"> 📸 Smile! 🌈 </span>
 		</h1>
 
-		<Camera {upload} {isUploading}></Camera>
+		<Camera {upload} {isUploading} {timeDiff}></Camera>
 	</div>
 
 	<!-- Cute Footer -->

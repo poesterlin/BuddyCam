@@ -15,8 +15,11 @@
 	let stream: MediaStream | null = null;
 	let gl: WebGLRenderingContext | null = null;
 
-	let { upload, isUploading }: { upload: (blob: Blob) => Promise<void>; isUploading: boolean } =
-		$props();
+	let {
+		upload,
+		isUploading,
+		timeDiff
+	}: { upload: (blob: Blob) => Promise<void>; timeDiff: number; isUploading: boolean } = $props();
 
 	let availableCameras = $state<MediaDeviceInfo[]>([]);
 	let currentCameraIndex = $state(0);
@@ -36,7 +39,11 @@
 			const data = shouldTrigger.event.data as CaptureData;
 			timestamp = data.timestamp;
 
-			const timeRemaining = Math.max(timestamp - now, 300);
+			// calculate time remaining to trigger capture
+			// add time difference to server time
+			// ensure a minimum delay of 300ms
+			const timeRemaining = Math.max(timestamp - now - timeDiff, 300);
+
 			setTimeout(() => {
 				takePicture();
 			}, timeRemaining);
