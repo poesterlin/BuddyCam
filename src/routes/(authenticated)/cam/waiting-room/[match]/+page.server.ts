@@ -1,9 +1,10 @@
+import { EventType, type StartData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { eventsTable, matchupTable } from '$lib/server/db/schema';
 import { assert, generateId, validateAuth } from '$lib/server/util';
+import { redirect } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
-import { EventType, type StartData } from '$lib/events';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -12,11 +13,18 @@ export const load: PageServerLoad = async (event) => {
 	const [matchup] = await db
 		.select()
 		.from(matchupTable)
-		.where(and(eq(matchupTable.id, match)))
+		.where(
+			eq(matchupTable.id, match)
+			// or(eq(matchupTable.userId, locals.user.id), isNull(matchupTable.friendId))
+		)
 		.limit(1);
 
+	assert(matchup, 404, 'Match not found');
+
 	const isMine = matchup.userId === locals.user.id;
-	if (!isMine) {
+	const isUnassigned = matchup.friendId === undefined || matchup.friendId === null;
+
+	if (!isMine && isUnassigned) {
 		await db
 			.update(matchupTable)
 			.set({ friendId: locals.user.id })
@@ -41,7 +49,7 @@ export const load: PageServerLoad = async (event) => {
 				data: { matchId: match } satisfies StartData
 			}
 		]);
+	} else {
+		redirect(302, `/cam/${match}`);
 	}
-
-	assert(matchup, 404, 'Match not found');
 };

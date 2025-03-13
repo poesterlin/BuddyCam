@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { events } from '$lib/client/messages.svelte';
 	import { EventType, type StartData } from '$lib/events';
+	import { onMount } from 'svelte';
 
 	$effect(() => {
 		const goNext = events.new.find(({ event }) => event.type === EventType.START);
@@ -10,6 +11,14 @@
 			goto(`/cam/${data.matchId}`);
 			goNext.clear();
 		}
+	});
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			invalidateAll();
+		}, 1000);
+
+		return () => clearInterval(interval);
 	});
 </script>
 

@@ -4,14 +4,14 @@
 	import { toastStore } from '$lib/client/toast.svelte';
 	import { assert } from '$lib/client/util';
 	import { EventType, type CaptureData } from '$lib/events';
-	import { IconToggleLeft, IconToggleRightFilled } from '@tabler/icons-svelte';
+	import { IconLoader3, IconToggleLeft, IconToggleRightFilled } from '@tabler/icons-svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import FragmentShader from './fragment.glsl?raw';
 	import VertexShader from './vertex.glsl?raw';
 	import { enhance } from '$app/forms';
 
-	let videoRef: HTMLVideoElement;
-	let canvasRef: HTMLCanvasElement;
+	let videoRef = $state<HTMLVideoElement>(undefined as any);
+	let canvasRef = $state<HTMLCanvasElement>(undefined as any);
 	let stream: MediaStream | null = null;
 	let gl: WebGLRenderingContext | null = null;
 
@@ -120,6 +120,7 @@
 
 	async function capture() {
 		if (!videoRef || !canvasRef || isUploading) {
+			console.warn('Cannot capture photo');
 			return;
 		}
 
@@ -127,31 +128,23 @@
 			isUploading = true;
 			stopRendering = true;
 
-			let blob: Blob;
-
-			if (useWebGl) {
-				// Capture WebGL canvas
-				blob = await new Promise<Blob>((resolve) => {
-					canvasRef.toBlob((blob) => {
-						if (blob) {
-							resolve(blob);
-						} else {
-							toastStore.show('Error capturing photo');
-						}
-					});
-				});
-			} else {
-				// draw video frame to canvas
-				const canvas = new OffscreenCanvas(videoRef.videoWidth, videoRef.videoHeight);
-				const ctx = canvas.getContext('2d');
-				assert(ctx, 'Canvas context is null');
-				ctx.drawImage(videoRef, 0, 0, canvas.width, canvas.height);
-				blob = await canvas.convertToBlob();
-			}
+			const canvas = new OffscreenCanvas(videoRef.videoWidth, videoRef.videoHeight);
+			const ctx = canvas.getContext('2d');
+			assert(ctx, 'Canvas context is null');
+			ctx.drawImage(useWebGl ? canvasRef : videoRef, 0, 0, canvas.width, canvas.height);
+			const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 });
 
 			// stop video stream
 			if (stream) {
 				stream.getTracks().forEach((track) => track.stop());
+			}
+
+			if (location.href.endsWith('/debug')) {
+				const toMB = (bytes: number) => (bytes / 1024 / 1024).toFixed(2) + ' MB';
+				console.log('Recorded blob of size:', toMB(blob.size));
+				const url = URL.createObjectURL(blob);
+				window.open(url, '_blank');
+				return;
 			}
 
 			upload(blob);
@@ -316,9 +309,15 @@
 
 		return () => clearInterval(interval);
 	}
+
+	function debug(event: KeyboardEvent) {
+		if (event.key === 'd') {
+			takePicture();
+		}
+	}
 </script>
 
-<svelte:window onresize={handleResize} onorientationchange={handleResize} />
+<svelte:window onresize={handleResize} onorientationchange={handleResize} onkeyup={debug} />
 
 <!-- Camera Preview Container -->
 <div class="relative overflow-hidden rounded-3xl border-8 border-white bg-white p-2 shadow-2xl">
@@ -374,15 +373,29 @@
 <!-- Controls -->
 <div class="mt-8 flex flex-col items-center gap-4">
 	<!-- Capture Button -->
-	<form action="?/schedule" method="POST" use:enhance>
-		<input type="hidden" name="type" value="capture" />
+	{#if isUploading}
 		<button
-			type="submit"
-			class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+			disabled
+			class="rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300"
 		>
-			📸 Smile!
+			📸 Uploading...
+
+			<div class="h-6 w-6 animate-spin rounded-full border-b-2 border-t-2 border-rose-500">
+				<IconLoader3></IconLoader3>
+			</div>
 		</button>
-	</form>
+	{:else}
+		<form action="?/schedule" method="POST" use:enhance>
+			<input type="hidden" name="type" value="capture" />
+			<button
+				disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0}
+				type="submit"
+				class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				📸 Smile!
+			</button>
+		</form>
+	{/if}
 
 	<!-- Switch Camera Button - Only shown if multiple cameras are available -->
 	{#if availableCameras.length > 1}
