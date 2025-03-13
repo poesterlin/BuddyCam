@@ -39,12 +39,11 @@ export function initMessageChannel() {
 		},
 		error({ error }) {
 			console.error('Event stream error:', error);
-		},		
+		},
 		open() {
 			console.log('Event stream connected');
 		},
 		cache: false
-
 	}).select('message');
 
 	return connection.subscribe((payload?: string) => {
@@ -75,10 +74,12 @@ export function initMessageChannel() {
 			return true;
 		});
 
-		const hydrated = data.map((event) => ({
-			event,
-			clear: () => events.clear(event.id)
-		}));
+		const hydrated = data
+			.map((event) => ({
+				event,
+				clear: () => events.clear(event.id)
+			}))
+			.sort((a, b) => a.event.createdAt.getTime() - b.event.createdAt.getTime());
 
 		if (hydrated.length === 0) {
 			return;

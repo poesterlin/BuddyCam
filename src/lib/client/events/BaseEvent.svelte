@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Event } from '$lib/server/db/schema';
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 
 	let {
 		clear,
@@ -9,19 +9,29 @@
 		link
 	}: { link?: string; event: Event; clear: () => void; children: Snippet } = $props();
 
-	const diff = new Date().getTime() - new Date(event.createdAt).getTime();
+	let diff = $state(new Date().getTime() - new Date(event.createdAt).getTime());
 
-	const hours = Math.floor(diff / (1000 * 60 * 60));
-	const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-	const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+	let hours = $derived(Math.floor(diff / (1000 * 60 * 60)));
+	let minutes = $derived(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)));
+	let seconds = $derived(Math.floor((diff % (1000 * 60)) / 1000));
 
 	// @ts-expect-error - TS doesn't know about Intl.DurationFormat yet
 	const intl = new Intl.DurationFormat('en-US', { style: 'long' });
 
-	const formatted = intl.format({
-		hours: hours,
-		minutes: minutes,
-		seconds: seconds
+	let formatted = $derived(
+		intl.format({
+			hours: hours,
+			minutes: minutes,
+			seconds: seconds
+		})
+	);
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			diff += 1000;
+		}, 1000);
+
+		return () => clearInterval(interval);
 	});
 
 	function clearEvent(e: MouseEvent) {
@@ -39,11 +49,16 @@
 	class="flex items-center justify-between rounded-xl bg-gradient-to-br from-purple-500 to-teal-500 p-4 text-white shadow-sm transition-shadow duration-200 hover:shadow-md"
 >
 	{#if link}
-		<a href={link} class="flex items-center py-3" data-sveltekit-preload-data="tap">
+		<a
+			href={link}
+			class="flex items-center py-3"
+			data-sveltekit-preload-data="tap"
+			onclick={clearEvent}
+		>
 			{@render content()}
 		</a>
 	{:else}
-		<div class="flex items-center py-3">{@render content()}</div>
+		<button class="flex items-center py-3" onclick={clearEvent}>{@render content()}</button>
 	{/if}
 	<small class="hidden text-xs text-gray-200 sm:block">
 		{#if event.createdAt}
