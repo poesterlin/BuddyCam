@@ -76,7 +76,10 @@ export function initMessageChannel() {
 
 		const hydrated = data
 			.map((event) => ({
-				event,
+				event: {
+					...event,
+					createdAt: new Date(event.createdAt)
+				},
 				clear: () => events.clear(event.id)
 			}))
 			.sort((a, b) => a.event.createdAt.getTime() - b.event.createdAt.getTime());
