@@ -123,7 +123,13 @@ export const actions: Actions = {
 		assert(matchup, 404, 'match not found');
 		assert(matchup.friendId, 400, 'friend has not joined yet');
 
-		const delay = 1000 * 4;
+		const [hasFiles] = await db
+			.select()
+			.from(filesTable)
+			.where(eq(filesTable.matchupId, match))
+			.limit(1);
+
+		const delay = hasFiles ? 0 : 1000 * 4; // dont delay if someone has already uploaded
 		const timestamp = Date.now() + delay;
 
 		await db.insert(eventsTable).values([
