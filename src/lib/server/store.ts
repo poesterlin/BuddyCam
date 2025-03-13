@@ -1,23 +1,12 @@
-import { assert } from '$lib/client/util';
-import type { Event, User } from './db/schema';
+import type { Event } from './db/schema';
 import { sendPushNotification } from './push';
 
 export class EventStore {
 	// Map of user ID to their events
-	private userEvents: Map<string, Map<string, Event>> = new Map();
+	private readonly userEvents: Map<string, Map<string, Event>> = new Map();
 
 	// Map of timeout IDs for cleanup
-	private timeouts: Map<string, NodeJS.Timeout> = new Map();
-
-	// Users info cache
-	private users: Set<string> = new Set();
-
-	/**
-	 * Add a user to the store
-	 */
-	public addUser(user: Pick<User, 'id'>): void {
-		this.users.add(user.id);
-	}
+	private readonly timeouts: Map<string, NodeJS.Timeout> = new Map();
 
 	/**
 	 * Record an event for a user with a timeout
@@ -53,11 +42,6 @@ export class EventStore {
 
 		const event = userEventMap.get(eventId);
 		if (!event) {
-			return;
-		}
-
-		const user = this.users.has(userId);
-		if (!user) {
 			return;
 		}
 
@@ -138,24 +122,18 @@ export class EventStore {
 
 		this.timeouts.clear();
 		this.userEvents.clear();
-		this.users.clear();
 	}
 
 	/**
 	 * Get stats about the store - useful for monitoring
 	 */
-	public getStats(): {
-		userCount: number;
-		eventCount: number;
-		timeoutCount: number;
-	} {
+	public getStats() {
 		let totalEvents = 0;
 		for (const userEventMap of this.userEvents.values()) {
 			totalEvents += userEventMap.size;
 		}
 
 		return {
-			userCount: this.users.size,
 			eventCount: totalEvents,
 			timeoutCount: this.timeouts.size
 		};

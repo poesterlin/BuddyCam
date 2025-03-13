@@ -1,5 +1,6 @@
 import { db, eventStore } from '$lib/server/db';
 import { eventsTable } from '$lib/server/db/schema';
+import { sendPushNotification } from '$lib/server/push';
 import { validateAuth } from '$lib/server/util';
 import type { RequestHandler } from '@sveltejs/kit';
 import { and, eq, inArray, lte, or } from 'drizzle-orm';
@@ -24,7 +25,6 @@ export const GET: RequestHandler = () => {
 
 export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
-	eventStore.addUser(locals.user);
 
 	// clear all impersistant events older than 1 hour
 	const cutoffDate = new Date();
@@ -73,8 +73,27 @@ export const POST: RequestHandler = async (event) => {
 				const { error } = emit('message', JSON.stringify(events));
 
 				if (error) {
-					console.error('Error sending event:', error, 'user:', locals.user.username);
+					for (const event of events) {
+						console.error(
+							'Error sending event:',
+							error,
+							'user:',
+							locals.user.username,
+							'sending push instead'
+						);
+						const success = await sendPushNotification(locals.user.id, event);
+						if (success) {
+							eventStore.removeEvent(event.id, locals.user.id);
+							await db
+								.update(eventsTable)
+								.set({ read: true })
+								.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.id, event.id)));
+						}
+					}
+
+					console.error('Error sending event, user:', locals.user.username);
 					lock.set(false);
+
 					return;
 				}
 
@@ -91,9 +110,8 @@ export const POST: RequestHandler = async (event) => {
 							events.map((event) => event.id)
 						)
 					);
-			} catch (error) {
-				console.error('Error in event stream:', error);
-			}
+			} catch (error) {}
+
 			await delay(100);
 		}
 	});

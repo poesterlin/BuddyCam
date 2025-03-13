@@ -26,6 +26,7 @@ export async function sendPushNotification(userId: string, event: Event) {
 		);
 
 	if (!subscriptions.length) {
+		console.log('No subscriptions found for user', userId);
 		return true;
 	}
 
@@ -33,16 +34,22 @@ export async function sendPushNotification(userId: string, event: Event) {
 
 	let success = false;
 	for (const subscription of subscriptions) {
-		const result = await webpush.sendNotification(
-			{
-				endpoint: subscription.endpoint,
-				expirationTime: subscription.expirationTime?.getTime(),
-				keys: subscription.keys as any
-			},
-			payload
-		);
+		try {
+			const result = await webpush.sendNotification(
+				{
+					endpoint: subscription.endpoint,
+					expirationTime: subscription.expirationTime?.getTime(),
+					keys: subscription.keys as any
+				},
+				payload
+			);
 
-		success ||= result.statusCode === 201 || result.statusCode === 200;
+			console.log('Push notification result:', result);
+
+			success ||= result.statusCode === 201 || result.statusCode === 200;
+		} catch (error) {
+			console.error('Failed to send push notification', error);
+		}
 	}
 
 	return success;
