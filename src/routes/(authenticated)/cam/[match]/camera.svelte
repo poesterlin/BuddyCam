@@ -42,7 +42,7 @@
 			// calculate time remaining to trigger capture
 			// add time difference to server time
 			// ensure a minimum delay of 300ms
-			const timeRemaining = Math.max(timestamp - now - timeDiff, 300);
+			const timeRemaining = Math.max(timestamp - now + timeDiff, 300);
 
 			setTimeout(() => {
 				takePicture();
