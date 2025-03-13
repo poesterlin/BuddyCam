@@ -3,6 +3,21 @@
 	import { applyAction, deserialize } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import Camera from './camera.svelte';
+	import { onMount } from 'svelte';
+
+	let { data } = $props();
+
+	onMount(() => {
+		const now = new Date();
+		const serverNow = new Date(data.now);
+		const diff = now.getTime() - serverNow.getTime();
+
+		if (diff < 0) {
+			console.log('Server time is ahead of client time by', -diff, 'ms');
+		} else {
+			console.log('Client time is ahead of server time by', diff, 'ms');
+		}
+	});
 
 	let isUploading = $state(false);
 

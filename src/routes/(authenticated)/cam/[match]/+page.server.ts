@@ -38,7 +38,7 @@ export const load: PageServerLoad = async (event) => {
 		redirect(302, '/friends/result/' + matchup.id);
 	}
 
-	return { matchup };
+	return { matchup, now: Date.now() };
 };
 
 export const actions: Actions = {
