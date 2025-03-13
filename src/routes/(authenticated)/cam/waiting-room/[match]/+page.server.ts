@@ -23,6 +23,7 @@ export const load: PageServerLoad = async (event) => {
 
 	const isMine = matchup.userId === locals.user.id;
 	const isAssigned = !!matchup.friendId;
+	const isFriend = matchup.friendId === locals.user.id;
 
 	if (isAssigned && isMine) {
 		redirect(302, `/cam/${match}`);
@@ -46,6 +47,10 @@ export const load: PageServerLoad = async (event) => {
 			}
 		]);
 
+		redirect(302, `/cam/${match}`);
+	}
+
+	if (isFriend) {
 		redirect(302, `/cam/${match}`);
 	}
 
