@@ -331,6 +331,7 @@
 			return;
 		}
 		pressed = true;
+
 		// capture photo and upload after 6 seconds if no trigger received
 		setTimeout(() => {
 			takePicture();
