@@ -11,7 +11,7 @@
 
 	onMount(() => {
 		const now = new Date();
-		const serverNow = new Date(data.now);
+		const serverNow = new Date(data?.now ?? now);
 		timeDiff = now.getTime() - serverNow.getTime();
 
 		if (timeDiff < 0) {

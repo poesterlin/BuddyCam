@@ -28,6 +28,7 @@
 	let videoSize = $state({ width: 640, height: 480 });
 	let timestamp = $state(0);
 	let now = $state(0);
+	let blob: Blob | null = null;
 
 	let stopRendering = false;
 	let shouldCapture = false;
@@ -45,6 +46,7 @@
 			const timeRemaining = Math.max(timestamp - now + timeDiff, 300);
 
 			setTimeout(() => {
+				stopRendering = true;
 				takePicture();
 			}, timeRemaining);
 
@@ -100,7 +102,6 @@
 			});
 
 			if (videoRef) {
-				// assert(videoRef, 'Video element is null');
 				videoRef.srcObject = stream;
 			}
 
@@ -133,16 +134,15 @@
 
 		try {
 			isUploading = true;
-			stopRendering = true;
 
 			const canvas = new OffscreenCanvas(videoRef.videoWidth, videoRef.videoHeight);
 			const ctx = canvas.getContext('2d');
 			assert(ctx, 'Canvas context is null');
 			ctx.drawImage(useWebGl ? canvasRef : videoRef, 0, 0, canvas.width, canvas.height);
-			const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 });
+			blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 });
 
 			// stop video stream
-			if (stream) {
+			if (stopRendering && stream) {
 				stream.getTracks().forEach((track) => track.stop());
 			}
 
@@ -154,7 +154,9 @@
 				return;
 			}
 
-			upload(blob);
+			if (stopRendering) {
+				upload(blob);
+			}
 		} catch (error) {
 			toastStore.show('Error uploading photo');
 			console.error(error);
@@ -322,6 +324,25 @@
 			takePicture();
 		}
 	}
+
+	let pressed = false;
+	function fallbackShutter() {
+		if (pressed) {
+			return;
+		}
+		pressed = true;
+		// capture photo and upload after 6 seconds if no trigger received
+		setTimeout(() => {
+			takePicture();
+		}, 2000);
+
+		setTimeout(() => {
+			if (blob) {
+				stopRendering = true;
+				upload(blob);
+			}
+		}, 6000);
+	}
 </script>
 
 <svelte:window onresize={handleResize} onorientationchange={handleResize} onkeyup={debug} />
@@ -395,6 +416,7 @@
 		<form action="?/schedule" method="POST" use:enhance>
 			<input type="hidden" name="type" value="capture" />
 			<button
+				onclick={fallbackShutter}
 				disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0}
 				type="submit"
 				class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
