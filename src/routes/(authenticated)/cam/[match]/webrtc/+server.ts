@@ -73,5 +73,5 @@ export const POST: RequestHandler = async (event) => {
 		}
 	} satisfies typeof eventsTable.$inferInsert);
 
-	return new Response();
+	return new Response('ok', { status: 200 });
 };

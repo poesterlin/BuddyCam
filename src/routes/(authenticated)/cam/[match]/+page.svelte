@@ -27,6 +27,7 @@
 		});
 
 		if (offerEvent) {
+			console.log('Received WebRTC offer:', offerEvent.event.data);
 			createWebRtcAnswer(offerEvent.event.data);
 			offerEvent.clear();
 		}
@@ -44,6 +45,7 @@
 		});
 
 		if (candidateEvent) {
+			console.log('Received WebRTC candidate:', candidateEvent.event.data);
 			connectWebRtc(candidateEvent.event.data);
 			candidateEvent.clear();
 		}
@@ -61,6 +63,7 @@
 		}
 
 		if (data.matchup.userId === data.user.id) {
+			console.log('Creating WebRTC offer');
 			createWebRtcOffer();
 		}
 	});
