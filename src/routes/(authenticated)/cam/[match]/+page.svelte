@@ -22,21 +22,21 @@
 			}
 
 			const d: WebRtcData = event.data;
-			if (d.data && 'type' in d.data) {
-				return d.matchId === data.matchup.id && d.data.type;
+			if (d.payload && 'type' in d.payload) {
+				return d.matchId === data.matchup.id && d.payload.type;
 			}
 			return false;
 		});
 
 		if (offerEvent) {
-			const { data }: { data: RTCSessionDescriptionInit } = offerEvent.event.data;
+			const { payload }: { payload: RTCSessionDescriptionInit } = offerEvent.event.data;
 
-			if (data.type === 'offer') {
-				console.log('Received WebRTC offer:', data);
-				createWebRtcAnswer(data);
-			} else if (data.type === 'answer') {
-				console.log('Received WebRTC answer:', data);
-				receiveWebRtcAnswer(data);
+			if (payload.type === 'offer') {
+				console.log('Received WebRTC offer:', payload);
+				createWebRtcAnswer(payload);
+			} else if (payload.type === 'answer') {
+				console.log('Received WebRTC answer:', payload);
+				receiveWebRtcAnswer(payload);
 			}
 			offerEvent.clear();
 		}
@@ -47,7 +47,7 @@
 			}
 
 			const d: WebRtcData = event.data;
-			if (d.data && 'candidate' in d.data) {
+			if (d.payload && 'candidate' in d.payload) {
 				return d.matchId === data.matchup.id;
 			}
 			return false;
@@ -163,8 +163,33 @@
 			peerConnection = makeConnection();
 		}
 
-		await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+		peerConnection.onicecandidate = async (event) => {
+			if (event.candidate) {
+				console.log('[Answerer] Sending ICE candidate:', event.candidate);
+				const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ candidate: event.candidate })
+				});
+				if (!response.ok) {
+					console.error('[Answerer] Error sending ICE candidate:', response.statusText);
+				}
+			} else {
+				console.log('[Answerer] All local ICE candidates sent');
+			}
+		};
 
+		// It's good practice to re-assign oniceconnectionstatechange here
+		// if makeConnection doesn't handle potential re-creation scenarios perfectly
+		peerConnection.oniceconnectionstatechange = () => {
+			if (peerConnection) {
+				console.log('[Answerer] ICE connection state changed:', peerConnection.iceConnectionState);
+			}
+		};
+
+		await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 		const answer = await peerConnection.createAnswer();
 		await peerConnection.setLocalDescription(answer);
 
