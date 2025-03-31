@@ -59,26 +59,14 @@ export const POST: RequestHandler = async (event) => {
 
 	console.log('Parsed body:', body, locals.user.username, { matchup });
 
+	const other = isOwner ? matchup.friendId : matchup.userId;
+	assert(other, 'Other user not found');
 	await db.insert(eventsTable).values({
 		id: generateId(),
-		userId: locals.user.id,
+		userId: other,
 		type: EventType.WEBRTC,
 		createdAt: new Date(),
-		isTechnical: false,
-		persistent: false,
-		data: {
-			matchId: match,
-			payload: body
-		} satisfies WebRtcData
-	} satisfies typeof eventsTable.$inferInsert);
-
-	assert(matchup.friendId, 500, 'Friend ID should not be the same as user ID');
-	await db.insert(eventsTable).values({
-		id: generateId(),
-		userId: matchup.friendId,
-		type: EventType.WEBRTC,
-		createdAt: new Date(),
-		isTechnical: false,
+		isTechnical: true,
 		persistent: false,
 		data: {
 			matchId: match,

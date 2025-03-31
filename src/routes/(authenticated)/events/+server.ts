@@ -93,6 +93,8 @@ export const POST: RequestHandler = async (event) => {
 					return;
 				}
 
+				console.log('Sent event to user:', locals.user.username, events);
+
 				// only remove the events if they were successfully sent
 				eventStore.removeEvents(events);
 
