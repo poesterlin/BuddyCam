@@ -4,7 +4,7 @@ import { generateId, validateAuth } from '$lib/server/util';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
-import { EventType } from '$lib/events';
+import { EventType, type WebRtcData } from '$lib/events';
 
 // Define the possible values for RTCSdpType
 const rtcSdpTypeSchema = z.enum(['offer', 'pranswer', 'answer', 'rollback']);
@@ -20,7 +20,7 @@ const rtcSessionDescriptionInitSchema = z.object({
 // `usernameFragment` is also technically part of the dictionary but less common
 // in the init object itself passed to addIceCandidate.
 const rtcIceCandidateInitSchema = z.object({
-	candidate: z.string().nullable().optional(), // Can be null or empty string for end-of-candidates
+	candidate: z.string().optional(), // Can be null or empty string for end-of-candidates
 	sdpMid: z.string().nullable().optional(),
 	sdpMLineIndex: z.number().nullable().optional(),
 	usernameFragment: z.string().nullable().optional() // Less common but part of spec
@@ -69,8 +69,8 @@ export const POST: RequestHandler = async (event) => {
 		persistent: false,
 		data: {
 			matchId: match,
-			...parsedBody.data
-		}
+			data: parsedBody.data
+		} satisfies WebRtcData
 	} satisfies typeof eventsTable.$inferInsert);
 
 	return new Response('ok', { status: 200 });
