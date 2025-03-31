@@ -6,4 +6,6 @@
 	console.log(p);
 </script>
 
-<div></div>
+<div>
+	DEBUG: <pre>{JSON.stringify(p.event, null, 2)}</pre>
+</div>
