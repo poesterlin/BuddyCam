@@ -6,6 +6,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { EventType, type WebRtcData } from '$lib/events';
 	import { events } from '$lib/client/messages.svelte';
+	import type { Event } from '$lib/server/db/schema';
 
 	let { data } = $props();
 	let isUploading = $state(false);
@@ -13,28 +14,28 @@
 	let peerConnection: RTCPeerConnection | null = null;
 	let dataChannel: RTCDataChannel | null = null;
 
+	$inspect(events.new);
 	$effect(() => {
-		console.log(JSON.stringify(events.new));
-
-		const offerEvent = events.new.find(({ event }) => {
+		const offerEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
 			if (event.type !== EventType.WEBRTC) {
 				return false;
 			}
 
 			const d: WebRtcData = event.data;
 			if (d.data && 'type' in d.data) {
-				return d.matchId === data.matchup.id && d.data.type === 'offer';
+				return d.matchId === data.matchup.id && d.data.type;
 			}
 			return false;
 		});
 
 		if (offerEvent) {
-			console.log('Received WebRTC offer:', offerEvent.event.data);
-			createWebRtcAnswer(offerEvent.event.data);
+			const { data } = offerEvent.event.data;
+			console.log('Received WebRTC offer:', data);
+			createWebRtcAnswer(data);
 			offerEvent.clear();
 		}
 
-		const candidateEvent = events.new.find(({ event }) => {
+		const candidateEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
 			if (event.type !== EventType.WEBRTC) {
 				return false;
 			}
@@ -47,8 +48,9 @@
 		});
 
 		if (candidateEvent) {
-			console.log('Received WebRTC candidate:', candidateEvent.event.data);
-			connectWebRtc(candidateEvent.event.data);
+			const { data } = candidateEvent.event.data;
+			console.log('Received WebRTC candidate:', data);
+			connectWebRtc(data);
 			candidateEvent.clear();
 		}
 	});

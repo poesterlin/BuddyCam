@@ -6,13 +6,10 @@ import type { RequestHandler } from './$types';
 import { z } from 'zod';
 import { EventType, type WebRtcData } from '$lib/events';
 
-// Define the possible values for RTCSdpType
-const rtcSdpTypeSchema = z.enum(['offer', 'pranswer', 'answer', 'rollback']);
-
 // Schema for RTCSessionDescriptionInit
 const rtcSessionDescriptionInitSchema = z.object({
-	type: rtcSdpTypeSchema,
-	sdp: z.string().optional() // sdp can be optional or empty string
+	type: z.enum(['offer', 'pranswer', 'answer', 'rollback']),
+	sdp: z.string()
 });
 
 // Schema for RTCIceCandidateInit
@@ -60,7 +57,7 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	console.log('Parsed body:', parsedBody.data, body);
+	console.log('Parsed body:', body);
 
 	await db.insert(eventsTable).values({
 		id: generateId(),
@@ -71,7 +68,7 @@ export const POST: RequestHandler = async (event) => {
 		persistent: false,
 		data: {
 			matchId: match,
-			data: body
+			data: parsedBody.data
 		} satisfies WebRtcData
 	} satisfies typeof eventsTable.$inferInsert);
 
