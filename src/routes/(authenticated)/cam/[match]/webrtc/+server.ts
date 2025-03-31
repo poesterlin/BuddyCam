@@ -54,7 +54,13 @@ export const POST: RequestHandler = async (event) => {
 
 	const parsedBody = webRtcSignalSchema.safeParse(body);
 	if (!parsedBody.success) {
-		return new Response('Invalid body', { status: 400 });
+		return new Response(
+			JSON.stringify({
+				error: 'Invalid request body',
+				details: parsedBody.error.errors
+			}),
+			{ status: 400 }
+		);
 	}
 
 	await db.insert(eventsTable).values({
