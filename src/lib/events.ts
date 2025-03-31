@@ -8,7 +8,8 @@ export enum EventType {
 	CAPTURE = 'CAPTURE',
 	UPLOAD = 'UPLOAD',
 	DELETE_MATCHUP = 'DELETE_MATCHUP',
-	SUBSCRIPTION = 'SUBSCRIPTION'
+	SUBSCRIPTION = 'SUBSCRIPTION',
+	WEBRTC = 'WEBRTC'
 }
 
 export interface FriendRequestData {
@@ -32,4 +33,9 @@ export interface CaptureData extends StartData {
 export type UploadData = StartData;
 export interface DeleteMatchupData extends StartData {
 	fromUsername: string;
+}
+
+export interface WebRtcData {
+	matchId: string;
+	data: RTCSessionDescriptionInit | RTCIceCandidateInit;
 }

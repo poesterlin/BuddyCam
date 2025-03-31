@@ -3,11 +3,51 @@
 	import { applyAction, deserialize } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import Camera from './camera.svelte';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import { EventType, type WebRtcData } from '$lib/events';
+	import { events } from '$lib/client/messages.svelte';
 
 	let { data } = $props();
 	let isUploading = $state(false);
 	let timeDiff = $state(0);
+	let peerConnection: RTCPeerConnection | null = null;
+	let dataChannel: RTCDataChannel | null = null;
+
+	$effect(() => {
+		const offerEvent = events.new.find(({ event }) => {
+			if (event.type !== EventType.WEBRTC) {
+				return false;
+			}
+
+			const d: WebRtcData = event.data;
+			if ('type' in d.data) {
+				return d.matchId === data.matchup.id && d.data.type === 'offer';
+			}
+			return false;
+		});
+
+		if (offerEvent) {
+			createWebRtcAnswer(offerEvent.event.data);
+			offerEvent.clear();
+		}
+
+		const candidateEvent = events.new.find(({ event }) => {
+			if (event.type !== EventType.WEBRTC) {
+				return false;
+			}
+
+			const d: WebRtcData = event.data;
+			if ('candidate' in d.data) {
+				return d.matchId === data.matchup.id;
+			}
+			return false;
+		});
+
+		if (candidateEvent) {
+			connectWebRtc(candidateEvent.event.data);
+			candidateEvent.clear();
+		}
+	});
 
 	onMount(() => {
 		const now = new Date();
@@ -19,6 +59,18 @@
 		} else {
 			console.log('Client time is ahead of server time by', timeDiff, 'ms');
 		}
+
+		if (data.matchup.userId === data.user.id) {
+			createWebRtcOffer();
+		}
+	});
+
+	onDestroy(() => {
+		console.log('Closing WebRTC connection');
+		dataChannel?.close();
+		peerConnection?.close();
+		dataChannel = null;
+		peerConnection = null;
 	});
 
 	async function upload(blob: Blob) {
@@ -48,6 +100,126 @@
 		} finally {
 			isUploading = false;
 		}
+	}
+
+	async function createWebRtcOffer() {
+		peerConnection = makeConnection();
+		const offer = await peerConnection.createOffer();
+		await peerConnection.setLocalDescription(offer);
+
+		// Send the offer to the server
+		const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ offer })
+		});
+
+		if (!response.ok) {
+			console.error('Error sending WebRTC offer:', response.statusText);
+		}
+
+		// setup data channel
+		dataChannel = peerConnection.createDataChannel('chat');
+	}
+
+	async function createWebRtcAnswer(offer: RTCSessionDescriptionInit) {
+		if (!peerConnection) {
+			peerConnection = makeConnection();
+		}
+
+		await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+		const answer = await peerConnection.createAnswer();
+		await peerConnection.setLocalDescription(answer);
+
+		// Send the answer back to the server
+		const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ answer })
+		});
+
+		if (!response.ok) {
+			console.error('Error sending WebRTC answer:', response.statusText);
+		}
+	}
+
+	async function connectWebRtc(candidate: RTCIceCandidateInit) {
+		if (!peerConnection) {
+			throw new Error('Peer connection is not initialized');
+		}
+
+		await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+
+		dataChannel?.send('Hello from the other side!');
+	}
+
+	function makeConnection() {
+		const configuration = {
+			iceServers: [
+				{ urls: 'stun:stun.l.google.com:19302' },
+				{ urls: 'stun:stun1.l.google.com:19302' }
+			]
+		};
+
+		const connection = new RTCPeerConnection(configuration);
+
+		connection.onicecandidate = async (event) => {
+			if (event.candidate) {
+				console.log('Sending ICE candidate:', event.candidate);
+				// Send the candidate to the server for the other peer
+				const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					// Send the candidate object directly
+					body: JSON.stringify({ candidate: event.candidate })
+				});
+				if (!response.ok) {
+					console.error('Error sending ICE candidate:', response.statusText);
+				}
+			} else {
+				// End of candidates
+				console.log('All local ICE candidates sent');
+			}
+		};
+
+		connection.oniceconnectionstatechange = () => {
+			console.log('ICE connection state changed:', connection.iceConnectionState);
+			if (connection.iceConnectionState === 'disconnected') {
+				console.log('Peer disconnected');
+			}
+		};
+
+		connection.ondatachannel = (event) => {
+			console.log('ondatachannel event received');
+			dataChannel = event.channel;
+			setupDataChannelEventHandlers();
+		};
+
+		return connection;
+	}
+
+	function setupDataChannelEventHandlers() {
+		if (!dataChannel) return;
+		dataChannel.onopen = () => {
+			console.log('Data channel is open');
+			dataChannel?.send('Hello from the receiver!');
+		};
+		dataChannel.onmessage = (event) => {
+			console.log('Received message:', event.data);
+		};
+		dataChannel.onclose = () => {
+			console.log('Data channel is closed');
+		};
+		dataChannel.onerror = (error) => {
+			console.error('Data channel error:', error);
+		};
 	}
 </script>
 

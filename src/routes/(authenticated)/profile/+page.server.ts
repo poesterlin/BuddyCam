@@ -1,10 +1,9 @@
 import { db } from '$lib/server/db';
 import { subscriptionsTable, usersTable } from '$lib/server/db/schema';
-import { assert, generateId, validateAuth } from '$lib/server/util';
-import { and, eq } from 'drizzle-orm';
-import type { Actions, PageServerLoad } from './$types';
+import { assert, validateAuth } from '$lib/server/util';
 import { redirect } from '@sveltejs/kit';
-import { z } from 'zod';
+import { eq } from 'drizzle-orm';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -26,7 +25,7 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		user: {
 			...user,
-			passwordHash: undefined,
+			passwordHash: undefined
 		},
 		hasNotifications: !!hasNotifications
 	};
@@ -43,5 +42,5 @@ export const actions: Actions = {
 
 	logout: async (event) => {
 		validateAuth(event);
-	},
+	}
 };
