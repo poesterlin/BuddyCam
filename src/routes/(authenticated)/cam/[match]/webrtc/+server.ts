@@ -29,10 +29,7 @@ const rtcIceCandidateInitSchema = z.object({
 // Combined schema using z.union
 // This schema will validate successfully if the input matches *either*
 // rtcSessionDescriptionInitSchema *or* rtcIceCandidateInitSchema
-export const webRtcSignalSchema = z.union([
-	rtcSessionDescriptionInitSchema,
-	rtcIceCandidateInitSchema
-]);
+const webRtcSignalSchema = z.union([rtcSessionDescriptionInitSchema, rtcIceCandidateInitSchema]);
 
 export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
