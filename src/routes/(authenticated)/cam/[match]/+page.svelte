@@ -123,7 +123,10 @@
 	}
 
 	async function createWebRtcOffer() {
-		assert(isOfferer, 'Answerer should create an offer');
+		if (!isOfferer) {
+			console.error('Not the offerer, cannot create an offer');
+			return;
+		}
 		peerConnection = makeConnection();
 		const offer = await peerConnection.createOffer();
 		await peerConnection.setLocalDescription(offer);
@@ -144,7 +147,11 @@
 	}
 
 	async function createWebRtcAnswer(offer: RTCSessionDescriptionInit) {
-		assert(!isOfferer, 'Offerer should not create an answer');
+		if (isOfferer) {
+			console.error('Not the answerer, cannot create an answer');
+			return;
+		}
+
 		peerConnection = makeConnection();
 
 		peerConnection.onicecandidate = async (event) => {
@@ -176,7 +183,10 @@
 		if (!peerConnection) {
 			throw new Error('Peer connection is not initialized');
 		}
-		assert(isOfferer, 'Answerer should not receive an answer');
+		if (!isOfferer) {
+			console.error('Not the offerer, cannot receive an answer');
+			return;
+		}
 		await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 	}
 
