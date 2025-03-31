@@ -33,9 +33,11 @@ export const events = {
  */
 export function initMessageChannel() {
 	const connection = source('/events', {
-		// reconnect on close
 		close({ connect }) {
-			connect();
+			// reconnect after 1 second
+			setTimeout(() => {
+				connect();
+			}, 1000);
 		},
 		error({ error }) {
 			console.error('Event stream error:', error);
