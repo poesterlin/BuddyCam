@@ -32,6 +32,7 @@
 
 	let stopRendering = false;
 	let shouldCapture = false;
+	let shouldUpload = true;
 
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
@@ -49,7 +50,8 @@
 			console.log('Time remaining for capture:', timeRemaining, 'ms');
 
 			setTimeout(() => {
-				stopRendering = true;
+				shouldUpload = true;
+				shouldCapture = true;
 				takePicture();
 			}, timeRemaining);
 
@@ -154,7 +156,7 @@
 				return;
 			}
 
-			if (stopRendering) {
+			if (shouldUpload) {
 				console.log('Uploading photo...');
 				upload(blob);
 			} else {
@@ -350,7 +352,6 @@
 		setTimeout(() => {
 			if (blob) {
 				console.log('Uploading fallback photo...');
-				stopRendering = true;
 				upload(blob);
 			}
 		}, 6000);
