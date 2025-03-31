@@ -65,7 +65,7 @@ export const POST: RequestHandler = async (event) => {
 		userId: isOwner ? matchup.friendId! : locals.user.id,
 		type: EventType.WEBRTC,
 		createdAt: new Date(),
-		isTechnical: true,
+		isTechnical: false,
 		persistent: false,
 		data: {
 			matchId: match,
