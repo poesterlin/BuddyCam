@@ -120,7 +120,7 @@
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ offer })
+			body: JSON.stringify(offer)
 		});
 
 		if (!response.ok) {
@@ -147,7 +147,7 @@
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ answer })
+			body: JSON.stringify(answer)
 		});
 
 		if (!response.ok) {
