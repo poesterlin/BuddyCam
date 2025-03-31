@@ -14,6 +14,8 @@
 	let dataChannel: RTCDataChannel | null = null;
 
 	$effect(() => {
+		console.log(events.new);
+
 		const offerEvent = events.new.find(({ event }) => {
 			if (event.type !== EventType.WEBRTC) {
 				return false;
