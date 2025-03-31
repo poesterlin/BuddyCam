@@ -60,6 +60,8 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
+	console.log('Parsed body:', parsedBody.data, body);
+
 	await db.insert(eventsTable).values({
 		id: generateId(),
 		userId: isOwner ? matchup.friendId! : locals.user.id,
