@@ -36,6 +36,8 @@
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
 		if (shouldTrigger) {
+			console.log('Received capture event');
+
 			// set timestamp to trigger image capture
 			const data = shouldTrigger.event.data as CaptureData;
 			timestamp = data.timestamp;
@@ -44,6 +46,7 @@
 			// add time difference to server time
 			// ensure a minimum delay of 300ms
 			const timeRemaining = Math.max(timestamp - now + timeDiff, 300);
+			console.log('Time remaining for capture:', timeRemaining, 'ms');
 
 			setTimeout(() => {
 				stopRendering = true;
@@ -132,6 +135,8 @@
 			return;
 		}
 
+		console.log('Capturing photo...');
+
 		try {
 			isUploading = true;
 
@@ -140,11 +145,6 @@
 			assert(ctx, 'Canvas context is null');
 			ctx.drawImage(useWebGl ? canvasRef : videoRef, 0, 0, canvas.width, canvas.height);
 			blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 });
-
-			// stop video stream
-			if (stopRendering && stream) {
-				stream.getTracks().forEach((track) => track.stop());
-			}
 
 			if (location.href.endsWith('/debug')) {
 				const toMB = (bytes: number) => (bytes / 1024 / 1024).toFixed(2) + ' MB';
@@ -155,6 +155,7 @@
 			}
 
 			if (stopRendering) {
+				console.log('Uploading photo...');
 				upload(blob);
 			}
 		} catch (error) {
@@ -162,6 +163,11 @@
 			console.error(error);
 		} finally {
 			isUploading = false;
+		}
+
+		// stop video stream
+		if (stopRendering && stream) {
+			stream.getTracks().forEach((track) => track.stop());
 		}
 	}
 
@@ -291,6 +297,7 @@
 	function takePicture() {
 		if (useWebGl) {
 			shouldCapture = true;
+			console.log('Capture requested, will be processed in next render loop');
 		} else {
 			capture();
 		}
@@ -339,6 +346,7 @@
 
 		setTimeout(() => {
 			if (blob) {
+				console.log('Uploading fallback photo...');
 				stopRendering = true;
 				upload(blob);
 			}

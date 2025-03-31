@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import ReadyEvent from '$lib/client/events/ReadyEvent.svelte';
 	import { events } from '$lib/client/messages.svelte';
 	import { EventType, type ReadyRequestData, type StartData } from '$lib/events';
 	import { onMount } from 'svelte';
