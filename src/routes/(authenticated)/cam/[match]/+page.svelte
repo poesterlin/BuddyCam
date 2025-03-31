@@ -23,35 +23,23 @@
 
 			const d: WebRtcData = event.data;
 			if (d.data && 'type' in d.data) {
-				return d.matchId === data.matchup.id && d.data.type === 'offer';
+				return d.matchId === data.matchup.id && d.data.type;
 			}
 			return false;
 		});
 
 		if (offerEvent) {
-			const { data } = offerEvent.event.data;
-			console.log('Received WebRTC offer:', data);
-			createWebRtcAnswer(data);
+			const { data }: { data: RTCSessionDescriptionInit } = offerEvent.event.data;
+
+			if (data.type === 'offer') {
+				console.log('Received WebRTC offer:', data);
+				createWebRtcAnswer(data);
+			} else if (data.type === 'answer') {
+				console.log('Received WebRTC answer:', data);
+				receiveWebRtcAnswer(data);
+			}
 			offerEvent.clear();
 		}
-
-		// const answerEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
-		// 	if (event.type !== EventType.WEBRTC) {
-		// 		return false;
-		// 	}
-
-		// 	const d: WebRtcData = event.data;
-		// 	if (d.data && 'type' in d.data) {
-		// 		return d.matchId === data.matchup.id && d.data.type === 'answer';
-		// 	}
-		// 	return false;
-		// });
-
-		// if (answerEvent) {
-		// 	const { data } = answerEvent.event.data;
-		// 	console.log('Received WebRTC answer:', data);
-		// 	answerEvent.clear();
-		// }
 
 		const candidateEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
 			if (event.type !== EventType.WEBRTC) {
@@ -192,6 +180,14 @@
 		if (!response.ok) {
 			console.error('Error sending WebRTC answer:', response.statusText);
 		}
+	}
+
+	async function receiveWebRtcAnswer(answer: RTCSessionDescriptionInit) {
+		if (!peerConnection) {
+			throw new Error('Peer connection is not initialized');
+		}
+
+		await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 	}
 
 	async function connectWebRtc(candidate: RTCIceCandidateInit) {
