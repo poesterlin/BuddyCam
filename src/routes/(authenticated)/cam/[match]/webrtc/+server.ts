@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { eventsTable, matchupTable } from '$lib/server/db/schema';
-import { generateId, validateAuth } from '$lib/server/util';
+import { assert, generateId, validateAuth } from '$lib/server/util';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
@@ -57,11 +57,25 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	console.log('Parsed body:', body, locals.user.username);
+	console.log('Parsed body:', body, locals.user.username, matchup.userId, matchup.friendId);
 
 	await db.insert(eventsTable).values({
 		id: generateId(),
-		userId: isOwner ? matchup.friendId! : locals.user.id,
+		userId: locals.user.id,
+		type: EventType.WEBRTC,
+		createdAt: new Date(),
+		isTechnical: false,
+		persistent: false,
+		data: {
+			matchId: match,
+			payload: body
+		} satisfies WebRtcData
+	} satisfies typeof eventsTable.$inferInsert);
+
+	assert(matchup.friendId, 500, 'Friend ID should not be the same as user ID');
+	await db.insert(eventsTable).values({
+		id: generateId(),
+		userId: matchup.friendId,
 		type: EventType.WEBRTC,
 		createdAt: new Date(),
 		isTechnical: false,
