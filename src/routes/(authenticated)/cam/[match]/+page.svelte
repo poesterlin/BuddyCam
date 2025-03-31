@@ -7,12 +7,14 @@
 	import { EventType, type WebRtcData } from '$lib/events';
 	import { events } from '$lib/client/messages.svelte';
 	import type { Event } from '$lib/server/db/schema';
+	import { assert } from '$lib/client/util';
 
 	let { data } = $props();
 	let isUploading = $state(false);
 	let timeDiff = $state(0);
 	let peerConnection: RTCPeerConnection | null = null;
 	let dataChannel: RTCDataChannel | null = null;
+	let isOfferer = false;
 
 	$inspect(events.new);
 	$effect(() => {
@@ -74,6 +76,7 @@
 
 		if (data.matchup.userId === data.user.id) {
 			console.log('Creating WebRTC offer');
+			isOfferer = true;
 			createWebRtcOffer();
 		}
 	});
@@ -116,6 +119,7 @@
 	}
 
 	async function createWebRtcOffer() {
+		assert(isOfferer, 'Answerer should create an offer');
 		peerConnection = makeConnection();
 		const offer = await peerConnection.createOffer();
 		await peerConnection.setLocalDescription(offer);
@@ -124,58 +128,25 @@
 			if (event.candidate) {
 				console.log('Sending ICE candidate:', event.candidate);
 				// Send the candidate to the server for the other peer
-				const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					// Send the candidate object directly
-					body: JSON.stringify({ candidate: event.candidate })
-				});
-				if (!response.ok) {
-					console.error('Error sending ICE candidate:', response.statusText);
-				}
+				await sendWebRtcPayload(event);
 			} else {
 				// End of candidates
 				console.log('All local ICE candidates sent');
 			}
 		};
 
-		// Send the offer to the server
-		const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(offer)
-		});
-
-		if (!response.ok) {
-			console.error('Error sending WebRTC offer:', response.statusText);
-		}
-
-		// setup data channel
+		await sendWebRtcPayload(offer);
 		dataChannel = peerConnection.createDataChannel('chat');
 	}
 
 	async function createWebRtcAnswer(offer: RTCSessionDescriptionInit) {
-		if (!peerConnection) {
-			peerConnection = makeConnection();
-		}
+		assert(!isOfferer, 'Offerer should not create an answer');
+		peerConnection = makeConnection();
 
 		peerConnection.onicecandidate = async (event) => {
 			if (event.candidate) {
 				console.log('[Answerer] Sending ICE candidate:', event.candidate);
-				const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({ candidate: event.candidate })
-				});
-				if (!response.ok) {
-					console.error('[Answerer] Error sending ICE candidate:', response.statusText);
-				}
+				await sendWebRtcPayload(event);
 			} else {
 				console.log('[Answerer] All local ICE candidates sent');
 			}
@@ -194,24 +165,14 @@
 		await peerConnection.setLocalDescription(answer);
 
 		// Send the answer back to the server
-		const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(answer)
-		});
-
-		if (!response.ok) {
-			console.error('Error sending WebRTC answer:', response.statusText);
-		}
+		await sendWebRtcPayload(answer);
 	}
 
 	async function receiveWebRtcAnswer(answer: RTCSessionDescriptionInit) {
 		if (!peerConnection) {
 			throw new Error('Peer connection is not initialized');
 		}
-
+		assert(isOfferer, 'Answerer should not receive an answer');
 		await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 	}
 
@@ -219,7 +180,7 @@
 		if (!peerConnection) {
 			throw new Error('Peer connection is not initialized');
 		}
-
+		console.log(isOfferer ? '[Offerer]' : '[Answerer]', 'Received ICE candidate:', candidate);
 		await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
 
 		dataChannel?.send('Hello from the other side!');
@@ -242,11 +203,13 @@
 			}
 		};
 
-		connection.ondatachannel = (event) => {
-			console.log('ondatachannel event received');
-			dataChannel = event.channel;
-			setupDataChannelEventHandlers();
-		};
+		if (!isOfferer) {
+			connection.ondatachannel = (event) => {
+				console.log('ondatachannel event received');
+				dataChannel = event.channel;
+				setupDataChannelEventHandlers();
+			};
+		}
 
 		return connection;
 	}
@@ -266,6 +229,20 @@
 		dataChannel.onerror = (error) => {
 			console.error('Data channel error:', error);
 		};
+	}
+
+	async function sendWebRtcPayload(event: WebRtcData['payload']) {
+		const res = await fetch(`/cam/${data.matchup.id}/webrtc`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(event)
+		});
+
+		if (!res.ok) {
+			console.error('Error sending WebRTC payload:', res.statusText);
+		}
 	}
 </script>
 

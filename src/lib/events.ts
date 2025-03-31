@@ -37,5 +37,5 @@ export interface DeleteMatchupData extends StartData {
 
 export interface WebRtcData {
 	matchId: string;
-	payload: RTCSessionDescriptionInit | RTCIceCandidateInit;
+	payload: RTCSessionDescriptionInit | RTCIceCandidateInit | RTCPeerConnectionIceEvent;
 }
