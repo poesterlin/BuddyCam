@@ -157,6 +157,8 @@
 			if (stopRendering) {
 				console.log('Uploading photo...');
 				upload(blob);
+			} else {
+				console.log('Photo captured but not uploaded, rendering is still active');
 			}
 		} catch (error) {
 			toastStore.show('Error uploading photo');
@@ -167,6 +169,7 @@
 
 		// stop video stream
 		if (stopRendering && stream) {
+			console.log('Stopping video stream...');
 			stream.getTracks().forEach((track) => track.stop());
 		}
 	}
