@@ -51,7 +51,6 @@
 
 			setTimeout(() => {
 				shouldUpload = true;
-				shouldCapture = true;
 				takePicture();
 			}, timeRemaining);
 
