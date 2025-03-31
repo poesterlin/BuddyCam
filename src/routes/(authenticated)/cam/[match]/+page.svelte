@@ -20,7 +20,7 @@
 			}
 
 			const d: WebRtcData = event.data;
-			if ('type' in d.data) {
+			if (d.data && 'type' in d.data) {
 				return d.matchId === data.matchup.id && d.data.type === 'offer';
 			}
 			return false;
@@ -37,7 +37,7 @@
 			}
 
 			const d: WebRtcData = event.data;
-			if ('candidate' in d.data) {
+			if (d.data && 'candidate' in d.data) {
 				return d.matchId === data.matchup.id;
 			}
 			return false;
