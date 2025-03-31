@@ -68,7 +68,7 @@ export const POST: RequestHandler = async (event) => {
 		persistent: false,
 		data: {
 			matchId: match,
-			data: parsedBody.data
+			data: body
 		} satisfies WebRtcData
 	} satisfies typeof eventsTable.$inferInsert);
 
