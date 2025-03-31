@@ -66,10 +66,10 @@
 			console.log('Client time is ahead of server time by', timeDiff, 'ms');
 		}
 
-		// if (data.matchup.userId === data.user.id) {
-		console.log('Creating WebRTC offer');
-		createWebRtcOffer();
-		// }
+		if (data.matchup.userId === data.user.id) {
+			console.log('Creating WebRTC offer');
+			createWebRtcOffer();
+		}
 	});
 
 	onDestroy(() => {
