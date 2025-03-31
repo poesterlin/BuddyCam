@@ -32,7 +32,7 @@
 
 	let stopRendering = false;
 	let shouldCapture = false;
-	let shouldUpload = true;
+	let shouldUpload = false;
 
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);

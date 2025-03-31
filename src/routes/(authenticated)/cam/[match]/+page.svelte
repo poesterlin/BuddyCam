@@ -109,6 +109,10 @@
 				await invalidateAll();
 			}
 
+			if (result.type === 'error') {
+				return;
+			}
+
 			applyAction(result);
 		} catch (error) {
 			console.error('Error uploading photo:', error);
