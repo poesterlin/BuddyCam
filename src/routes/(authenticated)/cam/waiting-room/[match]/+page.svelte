@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import ReadyEvent from '$lib/client/events/ReadyEvent.svelte';
 	import { events } from '$lib/client/messages.svelte';
-	import { EventType, type StartData } from '$lib/events';
+	import { EventType, type ReadyRequestData, type StartData } from '$lib/events';
 	import { onMount } from 'svelte';
+
+	let { data } = $props();
 
 	$effect(() => {
 		const goNext = events.new.find(({ event }) => event.type === EventType.START);
@@ -14,6 +17,16 @@
 	});
 
 	onMount(() => {
+		// clear ready event from the queue
+		events.new
+			.filter(({ event }) => event.type === EventType.READY)
+			.forEach((e) => {
+				const { matchId } = e.event.data as ReadyRequestData;
+				if (matchId === data.matchup.id) {
+					e.clear();
+				}
+			});
+
 		const interval = setInterval(() => {
 			invalidateAll();
 		}, 1000);
