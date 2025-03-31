@@ -23,7 +23,7 @@
 
 			const d: WebRtcData = event.data;
 			if (d.data && 'type' in d.data) {
-				return d.matchId === data.matchup.id && d.data.type;
+				return d.matchId === data.matchup.id && d.data.type === 'offer';
 			}
 			return false;
 		});
@@ -34,6 +34,24 @@
 			createWebRtcAnswer(data);
 			offerEvent.clear();
 		}
+
+		// const answerEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
+		// 	if (event.type !== EventType.WEBRTC) {
+		// 		return false;
+		// 	}
+
+		// 	const d: WebRtcData = event.data;
+		// 	if (d.data && 'type' in d.data) {
+		// 		return d.matchId === data.matchup.id && d.data.type === 'answer';
+		// 	}
+		// 	return false;
+		// });
+
+		// if (answerEvent) {
+		// 	const { data } = answerEvent.event.data;
+		// 	console.log('Received WebRTC answer:', data);
+		// 	answerEvent.clear();
+		// }
 
 		const candidateEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
 			if (event.type !== EventType.WEBRTC) {
@@ -114,6 +132,27 @@
 		const offer = await peerConnection.createOffer();
 		await peerConnection.setLocalDescription(offer);
 
+		peerConnection.onicecandidate = async (event) => {
+			if (event.candidate) {
+				console.log('Sending ICE candidate:', event.candidate);
+				// Send the candidate to the server for the other peer
+				const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					// Send the candidate object directly
+					body: JSON.stringify({ candidate: event.candidate })
+				});
+				if (!response.ok) {
+					console.error('Error sending ICE candidate:', response.statusText);
+				}
+			} else {
+				// End of candidates
+				console.log('All local ICE candidates sent');
+			}
+		};
+
 		// Send the offer to the server
 		const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
 			method: 'POST',
@@ -174,27 +213,6 @@
 		};
 
 		const connection = new RTCPeerConnection(configuration);
-
-		connection.onicecandidate = async (event) => {
-			if (event.candidate) {
-				console.log('Sending ICE candidate:', event.candidate);
-				// Send the candidate to the server for the other peer
-				const response = await fetch(`/cam/${data.matchup.id}/webrtc`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					// Send the candidate object directly
-					body: JSON.stringify({ candidate: event.candidate })
-				});
-				if (!response.ok) {
-					console.error('Error sending ICE candidate:', response.statusText);
-				}
-			} else {
-				// End of candidates
-				console.log('All local ICE candidates sent');
-			}
-		};
 
 		connection.oniceconnectionstatechange = () => {
 			console.log('ICE connection state changed:', connection.iceConnectionState);
