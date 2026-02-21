@@ -8,7 +8,6 @@
 	import { onDestroy, onMount } from 'svelte';
 	import FragmentShader from './fragment.glsl?raw';
 	import VertexShader from './vertex.glsl?raw';
-	import { enhance } from '$app/forms';
 
 	let videoRef = $state<HTMLVideoElement>(undefined as any);
 	let canvasRef = $state<HTMLCanvasElement>(undefined as any);
@@ -17,9 +16,17 @@
 
 	let {
 		upload,
-		isUploading,
-		timeDiff
-	}: { upload: (blob: Blob) => Promise<void>; timeDiff: number; isUploading: boolean } = $props();
+		isUploading = $bindable(),
+		timeDiff,
+		captureAt,
+		onschedule
+	}: {
+		upload: (blob: Blob) => Promise<void>;
+		timeDiff: number;
+		isUploading: boolean;
+		captureAt: number;
+		onschedule: () => void;
+	} = $props();
 
 	let availableCameras = $state<MediaDeviceInfo[]>([]);
 	let currentCameraIndex = $state(0);
@@ -34,26 +41,31 @@
 	let shouldCapture = false;
 	let shouldUpload = false;
 
+	// Triggered by parent via captureAt prop (P2P path) or SSE event (server fallback)
+	function scheduleCaptureAt(ts: number) {
+		timestamp = ts;
+		const timeRemaining = Math.max(ts - now + timeDiff, 300);
+		console.log('Capture scheduled in', timeRemaining, 'ms');
+		setTimeout(() => {
+			shouldUpload = true;
+			takePicture();
+		}, timeRemaining);
+	}
+
+	$effect(() => {
+		if (captureAt > 0) {
+			console.log('Capture triggered via P2P prop');
+			scheduleCaptureAt(captureAt);
+		}
+	});
+
+	// SSE fallback: used when P2P data channel is not available
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
 		if (shouldTrigger) {
-			console.log('Received capture event');
-
-			// set timestamp to trigger image capture
+			console.log('Received capture event via SSE (server fallback)');
 			const data = shouldTrigger.event.data as CaptureData;
-			timestamp = data.timestamp;
-
-			// calculate time remaining to trigger capture
-			// add time difference to server time
-			// ensure a minimum delay of 300ms
-			const timeRemaining = Math.max(timestamp - now + timeDiff, 300);
-			console.log('Time remaining for capture:', timeRemaining, 'ms');
-
-			setTimeout(() => {
-				shouldUpload = true;
-				takePicture();
-			}, timeRemaining);
-
+			scheduleCaptureAt(data.timestamp);
 			shouldTrigger.clear();
 		}
 	});
@@ -336,25 +348,6 @@
 		}
 	}
 
-	let pressed = false;
-	function fallbackShutter() {
-		if (pressed) {
-			return;
-		}
-		pressed = true;
-
-		// capture photo and upload after 6 seconds if no trigger received
-		setTimeout(() => {
-			takePicture();
-		}, 2000);
-
-		setTimeout(() => {
-			if (blob) {
-				console.log('Uploading fallback photo...');
-				upload(blob);
-			}
-		}, 6000);
-	}
 </script>
 
 <svelte:window onresize={handleResize} onorientationchange={handleResize} onkeyup={debug} />
@@ -425,17 +418,13 @@
 			</div>
 		</button>
 	{:else}
-		<form action="?/schedule" method="POST" use:enhance>
-			<input type="hidden" name="type" value="capture" />
-			<button
-				onclick={fallbackShutter}
-				disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0}
-				type="submit"
-				class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				📸 Smile!
-			</button>
-		</form>
+		<button
+			onclick={onschedule}
+			disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0}
+			class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			📸 Smile!
+		</button>
 	{/if}
 
 	<!-- Switch Camera Button - Only shown if multiple cameras are available -->

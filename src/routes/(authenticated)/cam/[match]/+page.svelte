@@ -7,7 +7,6 @@
 	import { EventType, type WebRtcData } from '$lib/events';
 	import { events } from '$lib/client/messages.svelte';
 	import type { Event } from '$lib/server/db/schema';
-	import { assert } from '$lib/client/util';
 
 	let { data } = $props();
 	let isUploading = $state(false);
@@ -15,14 +14,11 @@
 	let peerConnection: RTCPeerConnection | null = null;
 	let dataChannel: RTCDataChannel | null = null;
 	let isOfferer = false;
+	let captureAt = $state(0);
 
-	$inspect(events.new);
 	$effect(() => {
 		const offerEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
-			if (event.type !== EventType.WEBRTC) {
-				return false;
-			}
-
+			if (event.type !== EventType.WEBRTC) return false;
 			const d: WebRtcData = event.data;
 			if (d.payload && 'type' in d.payload) {
 				return d.matchId === data.matchup.id && d.payload.type;
@@ -32,22 +28,18 @@
 
 		if (offerEvent) {
 			const { payload }: { payload: RTCSessionDescriptionInit } = offerEvent.event.data;
-
 			if (payload.type === 'offer') {
-				console.log('Received WebRTC offer:', payload);
+				console.log('Received WebRTC offer');
 				createWebRtcAnswer(payload);
 			} else if (payload.type === 'answer') {
-				console.log('Received WebRTC answer:', payload);
+				console.log('Received WebRTC answer');
 				receiveWebRtcAnswer(payload);
 			}
 			offerEvent.clear();
 		}
 
 		const candidateEvent = events.new.find(({ event }: { event: Event<WebRtcData> }) => {
-			if (event.type !== EventType.WEBRTC) {
-				return false;
-			}
-
+			if (event.type !== EventType.WEBRTC) return false;
 			const d: WebRtcData = event.data;
 			if (d.payload && 'candidate' in d.payload) {
 				return d.matchId === data.matchup.id;
@@ -56,9 +48,9 @@
 		});
 
 		if (candidateEvent) {
-			const { data } = candidateEvent.event.data;
-			console.log('Received WebRTC candidate:', data);
-			connectWebRtc(data);
+			const { payload } = candidateEvent.event.data;
+			console.log('Received WebRTC ICE candidate');
+			connectWebRtc(payload as RTCIceCandidateInit);
 			candidateEvent.clear();
 		}
 	});
@@ -93,11 +85,9 @@
 		try {
 			isUploading = true;
 
-			// Create FormData and append the blob
 			const formData = new FormData();
 			formData.append('photo', blob, `photo-${Date.now()}.jpg`);
 
-			// Upload to server
 			const response = await fetch('?/capture', {
 				method: 'POST',
 				body: formData
@@ -116,88 +106,75 @@
 			applyAction(result);
 		} catch (error) {
 			console.error('Error uploading photo:', error);
-			// Show error feedback here
 		} finally {
 			isUploading = false;
 		}
 	}
 
-	async function createWebRtcOffer() {
-		if (!isOfferer) {
-			console.error('Not the offerer, cannot create an offer');
-			return;
+	async function scheduleCapture() {
+		const delay = 4000;
+		const timestamp = Date.now() + delay;
+
+		if (dataChannel?.readyState === 'open') {
+			console.log('Scheduling capture via P2P data channel');
+			dataChannel.send(JSON.stringify({ type: 'capture', timestamp }));
+			captureAt = timestamp;
+		} else {
+			console.log('P2P not ready, falling back to server-mediated capture');
+			const res = await fetch('?/schedule', { method: 'POST', body: new FormData() });
+			if (!res.ok) {
+				console.error('Failed to schedule capture via server');
+			}
 		}
+	}
+
+	async function createWebRtcOffer() {
+		if (!isOfferer) return;
 		peerConnection = makeConnection();
-		const offer = await peerConnection.createOffer();
-		await peerConnection.setLocalDescription(offer);
 
 		peerConnection.onicecandidate = async (event) => {
 			if (event.candidate) {
-				console.log('Sending ICE candidate:', event.candidate);
-				// Send the candidate to the server for the other peer
-				await sendWebRtcPayload(event);
+				await sendWebRtcPayload(event.candidate.toJSON());
 			} else {
-				// End of candidates
-				console.log('All local ICE candidates sent');
+				console.log('[Offerer] All ICE candidates sent');
 			}
 		};
 
+		dataChannel = peerConnection.createDataChannel('cam');
+		setupDataChannelEventHandlers();
+
+		const offer = await peerConnection.createOffer();
+		await peerConnection.setLocalDescription(offer);
 		await sendWebRtcPayload(offer);
-		dataChannel = peerConnection.createDataChannel('chat');
 	}
 
 	async function createWebRtcAnswer(offer: RTCSessionDescriptionInit) {
-		if (isOfferer) {
-			console.error('Not the answerer, cannot create an answer');
-			return;
-		}
+		if (isOfferer) return;
 
 		peerConnection = makeConnection();
 
 		peerConnection.onicecandidate = async (event) => {
 			if (event.candidate) {
-				console.log('[Answerer] Sending ICE candidate:', event.candidate);
-				await sendWebRtcPayload(event);
+				await sendWebRtcPayload(event.candidate.toJSON());
 			} else {
-				console.log('[Answerer] All local ICE candidates sent');
-			}
-		};
-
-		// It's good practice to re-assign oniceconnectionstatechange here
-		// if makeConnection doesn't handle potential re-creation scenarios perfectly
-		peerConnection.oniceconnectionstatechange = () => {
-			if (peerConnection) {
-				console.log('[Answerer] ICE connection state changed:', peerConnection.iceConnectionState);
+				console.log('[Answerer] All ICE candidates sent');
 			}
 		};
 
 		await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 		const answer = await peerConnection.createAnswer();
 		await peerConnection.setLocalDescription(answer);
-
-		// Send the answer back to the server
 		await sendWebRtcPayload(answer);
 	}
 
 	async function receiveWebRtcAnswer(answer: RTCSessionDescriptionInit) {
-		if (!peerConnection) {
-			throw new Error('Peer connection is not initialized');
-		}
-		if (!isOfferer) {
-			console.error('Not the offerer, cannot receive an answer');
-			return;
-		}
+		if (!peerConnection || !isOfferer) return;
 		await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 	}
 
 	async function connectWebRtc(candidate: RTCIceCandidateInit) {
-		if (!peerConnection) {
-			throw new Error('Peer connection is not initialized');
-		}
-		console.log(isOfferer ? '[Offerer]' : '[Answerer]', 'Received ICE candidate:', candidate);
+		if (!peerConnection) return;
 		await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-
-		dataChannel?.send('Hello from the other side!');
 	}
 
 	function makeConnection() {
@@ -211,15 +188,12 @@
 		const connection = new RTCPeerConnection(configuration);
 
 		connection.oniceconnectionstatechange = () => {
-			console.log('ICE connection state changed:', connection.iceConnectionState);
-			if (connection.iceConnectionState === 'disconnected') {
-				console.log('Peer disconnected');
-			}
+			console.log('ICE connection state:', connection.iceConnectionState);
 		};
 
 		if (!isOfferer) {
 			connection.ondatachannel = (event) => {
-				console.log('ondatachannel event received');
+				console.log('Data channel received by answerer');
 				dataChannel = event.channel;
 				setupDataChannelEventHandlers();
 			};
@@ -231,27 +205,32 @@
 	function setupDataChannelEventHandlers() {
 		if (!dataChannel) return;
 		dataChannel.onopen = () => {
-			console.log('Data channel is open');
-			dataChannel?.send('Hello from the receiver!');
+			console.log('Data channel open');
 		};
 		dataChannel.onmessage = (event) => {
-			console.log('Received message:', event.data);
+			try {
+				const msg = JSON.parse(event.data);
+				if (msg.type === 'capture' && typeof msg.timestamp === 'number') {
+					console.log('Received P2P capture trigger, timestamp:', msg.timestamp);
+					captureAt = msg.timestamp;
+				}
+			} catch {
+				console.error('Failed to parse data channel message:', event.data);
+			}
 		};
 		dataChannel.onclose = () => {
-			console.log('Data channel is closed');
+			console.log('Data channel closed');
 		};
 		dataChannel.onerror = (error) => {
 			console.error('Data channel error:', error);
 		};
 	}
 
-	async function sendWebRtcPayload(event: WebRtcData['payload']) {
+	async function sendWebRtcPayload(payload: WebRtcData['payload']) {
 		const res = await fetch(`/cam/${data.matchup.id}/webrtc`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(event)
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
 		});
 
 		if (!res.ok) {
@@ -272,7 +251,8 @@
 			<span class="mt-2 block text-lg text-pink-400"> 📸 Smile! 🌈 </span>
 		</h1>
 
-		<Camera {upload} {isUploading} {timeDiff}></Camera>
+		<Camera {upload} bind:isUploading {timeDiff} {captureAt} onschedule={scheduleCapture}
+		></Camera>
 	</div>
 
 	<!-- Cute Footer -->
