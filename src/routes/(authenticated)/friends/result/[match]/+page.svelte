@@ -8,8 +8,10 @@
 
 	let randomKey = $state(Math.random());
 
-	const myId = data.user.id;
-	const other = myId === data.matchup.friendId ? data.matchup.userId : data.matchup.friendId;
+	let myId = $derived(data.user.id);
+	let other = $derived(
+		myId === data.matchup.friendId ? data.matchup.userId : data.matchup.friendId
+	);
 
 	$effect(() => {
 		const upload = events.new.find(({ event }) => event.type === EventType.UPLOAD);

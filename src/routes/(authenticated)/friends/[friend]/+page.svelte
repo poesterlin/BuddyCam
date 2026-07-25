@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { IconDownload, IconShare } from '@tabler/icons-svelte';
+	import { IconDownload } from '@tabler/icons-svelte';
 
 	let { data } = $props();
 
@@ -18,8 +18,6 @@
 
 	{#if data.matchups > 0}
 		<div class="relative overflow-hidden rounded-lg">
-			<!-- svelte-ignore a11y_media_has_caption -->
-			<!-- svelte-ignore element_invalid_self_closing_tag -->
 			<video
 				src="/friends/{data.friend.id}/video"
 				muted

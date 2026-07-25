@@ -1,48 +1,81 @@
 import { env } from '$env/dynamic/private';
-import { Client } from 'minio';
+import sharp from 'sharp';
 
-const { MINIO_KEY, MINIO_SECRET, MINIO_URL, MINIO_BUCKET, MINIO_PORT } = env;
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_INPUT_PIXELS = 20_000_000;
 
-const client = new Client({
-	endPoint: MINIO_URL,
-	port: parseInt(MINIO_PORT),
-	accessKey: MINIO_KEY,
-	secretKey: MINIO_SECRET,
-	useSSL: false
-});
+function getStorage() {
+	const { MINIO_KEY, MINIO_SECRET, MINIO_URL, MINIO_BUCKET, MINIO_PORT } = env;
+	if (!MINIO_KEY || !MINIO_SECRET || !MINIO_URL || !MINIO_BUCKET) {
+		throw new Error('MinIO configuration is incomplete');
+	}
+
+	const protocol = env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
+	const endpoint = new URL(
+		MINIO_URL.startsWith('http://') || MINIO_URL.startsWith('https://')
+			? MINIO_URL
+			: `${protocol}://${MINIO_URL}`
+	);
+	if (!endpoint.port && MINIO_PORT) endpoint.port = MINIO_PORT;
+
+	return {
+		client: new Bun.S3Client({
+			accessKeyId: MINIO_KEY,
+			secretAccessKey: MINIO_SECRET,
+			bucket: MINIO_BUCKET,
+			endpoint: endpoint.toString(),
+			region: env.S3_REGION || 'us-east-1'
+		})
+	};
+}
 
 export async function uploadFile(sha: string, file: File) {
-	const buffer = Buffer.from(await file.arrayBuffer());
-	const metaData = { 'content-type': file.type };
-	await client.putObject(MINIO_BUCKET, sha, buffer, undefined, metaData);
+	if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
+		throw new Error('Photo must be between 1 byte and 10 MB');
+	}
+	if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+		throw new Error('Photo must be a JPEG, PNG, or WebP image');
+	}
+
+	const input = Buffer.from(await file.arrayBuffer());
+	const buffer = await sharp(input, {
+		failOn: 'warning',
+		limitInputPixels: MAX_INPUT_PIXELS
+	})
+		.rotate()
+		.resize({ width: 4096, height: 4096, fit: 'inside', withoutEnlargement: true })
+		.jpeg({ quality: 90, mozjpeg: true })
+		.toBuffer();
+	const { client } = getStorage();
+	await client.write(sha, buffer, { type: 'image/jpeg' });
 }
 
 export async function uploadFileFromPath(sha: string, path: string) {
-	await client.fPutObject(MINIO_BUCKET, sha, path);
+	const { client } = getStorage();
+	await client.write(sha, Bun.file(path));
 }
 
 export async function downloadFile(sha: string, output: string) {
-	await client.fGetObject(MINIO_BUCKET, sha, output);
+	const { client } = getStorage();
+	await Bun.write(output, client.file(sha));
 }
 
 export async function getFileStream(sha: string) {
-	return client.getObject(MINIO_BUCKET, sha);
+	const { client } = getStorage();
+	return client.file(sha).stream();
 }
 
 export async function getFile(sha: string) {
-	const stream = await client.getObject(MINIO_BUCKET, sha);
-	return readStreamToBuffer(stream);
+	const { client } = getStorage();
+	return Buffer.from(await client.file(sha).arrayBuffer());
 }
 
-export function readStreamToBuffer(readable: any) {
-	return new Promise<Buffer>((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		readable.on('data', (chunk: Buffer) => {
-			chunks.push(chunk);
-		});
-		readable.on('end', () => {
-			resolve(Buffer.concat(chunks));
-		});
-		readable.on('error', reject);
-	});
+export async function deleteFile(sha: string) {
+	const { client } = getStorage();
+	await client.delete(sha);
+}
+
+export async function checkStorage() {
+	const { client } = getStorage();
+	await client.exists(env.S3_HEALTHCHECK_KEY || '.buddycam-healthcheck');
 }

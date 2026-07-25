@@ -1,9 +1,9 @@
 import { EventType, type FriendRequestAcceptedData } from '$lib/events';
 import { db } from '$lib/server/db';
-import { eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
+import { blocksTable, eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
 import { assert, generateId, validateAuth } from '$lib/server/util';
 import { redirect } from '@sveltejs/kit';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -29,7 +29,6 @@ export const load: PageServerLoad = async (event) => {
 		.innerJoin(usersTable, eq(friendsTable.userId, usersTable.id))
 		.limit(1);
 
-	// TODO: implement blocking users
 	assert(targetedUser, 400, 'Friend request not found');
 
 	// check if they are already friends
@@ -61,29 +60,26 @@ export const actions: Actions = {
 
 		assert(request, 400, 'Friend request not found');
 
-		// accept the friend request
-		await db.update(friendsTable).set({ accepted: true }).where(eq(friendsTable.id, request.id));
-
-		// insert reverse friendship
-		await db.insert(friendsTable).values({
-			id: generateId(),
-			userId: locals.user.id,
-			friendId: id,
-			accepted: true,
-			createdAt: new Date()
-		});
-
-		// insert event for the user who sent the request
-		await db.insert(eventsTable).values({
-			id: generateId(),
-			userId: id,
-			type: EventType.FRIEND_REQUEST_ACCEPTED,
-			isTechnical: false,
-			data: {
-				fromId: locals.user.id,
-				fromUsername: locals.user.username
-			} satisfies FriendRequestAcceptedData,
-			createdAt: new Date()
+		await db.transaction(async (tx) => {
+			await tx.update(friendsTable).set({ accepted: true }).where(eq(friendsTable.id, request.id));
+			await tx.insert(friendsTable).values({
+				id: generateId(),
+				userId: locals.user.id,
+				friendId: id,
+				accepted: true,
+				createdAt: new Date()
+			});
+			await tx.insert(eventsTable).values({
+				id: generateId(),
+				userId: id,
+				type: EventType.FRIEND_REQUEST_ACCEPTED,
+				isTechnical: false,
+				data: {
+					fromId: locals.user.id,
+					fromUsername: locals.user.username
+				} satisfies FriendRequestAcceptedData,
+				createdAt: new Date()
+			});
 		});
 
 		// delete the friend request event
@@ -107,10 +103,28 @@ export const actions: Actions = {
 	block: async (event) => {
 		const locals = validateAuth(event);
 		const { id } = event.params;
+		assert(id, 400, 'User ID is required');
 
+		await db.transaction(async (tx) => {
+			await tx
+				.delete(friendsTable)
+				.where(
+					or(
+						and(eq(friendsTable.userId, id), eq(friendsTable.friendId, locals.user.id)),
+						and(eq(friendsTable.userId, locals.user.id), eq(friendsTable.friendId, id))
+					)
+				);
+			await tx
+				.insert(blocksTable)
+				.values({
+					id: generateId(),
+					blockerId: locals.user.id,
+					blockedId: id,
+					createdAt: new Date()
+				})
+				.onConflictDoNothing();
+		});
 		await deleteFriendRequestEvent(id, locals);
-
-		// TODO: implement blocking users
 		redirect(302, '/friends');
 	}
 };
@@ -120,9 +134,9 @@ async function deleteFriendRequestEvent(id: string, locals: App.Locals) {
 		.delete(eventsTable)
 		.where(
 			and(
-				eq(eventsTable.userId, id),
+				eq(eventsTable.userId, locals.user!.id),
 				eq(eventsTable.type, EventType.FRIEND_REQUEST),
-				sql`data->>'userId' = ${locals.user!.id}`
+				sql`data->>'fromId' = ${id}`
 			)
 		);
 }

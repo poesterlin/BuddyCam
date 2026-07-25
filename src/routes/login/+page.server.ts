@@ -1,7 +1,13 @@
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { validateForm, validatePassword, validateUsername } from '$lib/server/util';
+import {
+	safeRedirectPath,
+	validateForm,
+	validatePassword,
+	validateUsername
+} from '$lib/server/util';
+import { consumeRateLimit } from '$lib/server/rate-limit';
 import { verify } from '@node-rs/argon2';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
@@ -25,6 +31,27 @@ export const actions: Actions = {
 		}),
 		async (event, form) => {
 			const { username, password } = form;
+			const clientAddress = event.getClientAddress();
+			const ipRateLimit = consumeRateLimit(`login-ip:${clientAddress}`, {
+				limit: 30,
+				windowMs: 15 * 60_000
+			});
+			const accountRateLimit = consumeRateLimit(`login-account:${username.toLowerCase()}`, {
+				limit: 10,
+				windowMs: 15 * 60_000
+			});
+			const remaining = Math.min(ipRateLimit.remaining, accountRateLimit.remaining);
+			const retryAfterSeconds = Math.max(
+				ipRateLimit.retryAfterSeconds,
+				accountRateLimit.retryAfterSeconds
+			);
+			event.setHeaders({ 'RateLimit-Remaining': String(remaining) });
+			if (!ipRateLimit.allowed || !accountRateLimit.allowed) {
+				event.setHeaders({ 'Retry-After': String(retryAfterSeconds) });
+				return fail(429, {
+					message: 'Too many login attempts. Please try again later.'
+				});
+			}
 
 			if (!validateUsername(username)) {
 				return fail(400, {
@@ -74,14 +101,7 @@ export const actions: Actions = {
 				.set({ lastLogin: new Date() })
 				.where(eq(table.usersTable.id, existingUser.id));
 
-			let to = '/';
-			const redirectUrl = 'http://t' + form.redirect;
-			try {
-				const url = new URL(redirectUrl);
-				to = url.searchParams.get('redirect') || '/';
-			} catch {}
-
-			return redirect(302, to);
+			return redirect(302, safeRedirectPath(form.redirect));
 		}
 	)
 };

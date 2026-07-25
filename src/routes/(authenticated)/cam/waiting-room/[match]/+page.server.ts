@@ -1,9 +1,9 @@
 import { EventType, type StartData } from '$lib/events';
 import { db } from '$lib/server/db';
-import { eventsTable, matchupTable } from '$lib/server/db/schema';
+import { eventsTable, friendsTable, matchupTable } from '$lib/server/db/schema';
 import { assert, generateId, validateAuth } from '$lib/server/util';
 import { redirect } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -30,10 +30,25 @@ export const load: PageServerLoad = async (event) => {
 	}
 
 	if (!isAssigned && !isMine) {
-		await db
+		const [friendship] = await db
+			.select({ id: friendsTable.id })
+			.from(friendsTable)
+			.where(
+				and(
+					eq(friendsTable.userId, matchup.userId),
+					eq(friendsTable.friendId, locals.user.id),
+					eq(friendsTable.accepted, true)
+				)
+			)
+			.limit(1);
+		assert(friendship, 403, 'You are not allowed to join this matchup');
+
+		const [claimed] = await db
 			.update(matchupTable)
 			.set({ friendId: locals.user.id })
-			.where(and(eq(matchupTable.id, match)));
+			.where(and(eq(matchupTable.id, match), isNull(matchupTable.friendId)))
+			.returning();
+		assert(claimed, 409, 'This matchup has already been claimed');
 
 		// insert a start event for both users
 		await db.insert(eventsTable).values([

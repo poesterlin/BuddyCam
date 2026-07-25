@@ -83,7 +83,7 @@ export const actions: Actions = {
 					and(
 						eq(eventsTable.userId, request.friendId),
 						eq(eventsTable.type, EventType.FRIEND_REQUEST),
-						sql`data->>'userId' = ${locals.user.id}`
+						sql`data->>'fromId' = ${locals.user.id}`
 					)
 				);
 		}

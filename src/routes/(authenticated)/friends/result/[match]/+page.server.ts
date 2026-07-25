@@ -5,6 +5,7 @@ import { and, eq, or } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { EventType, type DeleteMatchupData } from '$lib/events';
+import { deleteFile } from '$lib/server/s3';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -48,8 +49,11 @@ export const actions: Actions = {
 
 		assert(matchup, 404, 'Match not found');
 
-		await db.delete(filesTable).where(eq(filesTable.matchupId, match));
-		await db.delete(matchupTable).where(eq(matchupTable.id, match));
+		const files = await db
+			.select({ id: filesTable.id })
+			.from(filesTable)
+			.where(eq(filesTable.matchupId, match));
+		await Promise.all(files.map((file) => deleteFile(file.id)));
 
 		// add delete event for other user
 		const otherUserId = locals.user.id === matchup.userId ? matchup.friendId : matchup.userId;
@@ -61,13 +65,20 @@ export const actions: Actions = {
 			.where(eq(usersTable.id, otherUserId))
 			.limit(1);
 
-		await db.insert(eventsTable).values({
-			id: generateId(),
-			userId: otherUserId,
-			type: EventType.DELETE_MATCHUP,
-			createdAt: new Date(),
-			data: { matchId: match, fromUsername: otherUser.username } satisfies DeleteMatchupData,
-			isTechnical: false
+		assert(otherUser, 404, 'Other user not found');
+		await db.transaction(async (tx) => {
+			await tx.delete(matchupTable).where(eq(matchupTable.id, match));
+			await tx.insert(eventsTable).values({
+				id: generateId(),
+				userId: otherUserId,
+				type: EventType.DELETE_MATCHUP,
+				createdAt: new Date(),
+				data: {
+					matchId: match,
+					fromUsername: otherUser.username
+				} satisfies DeleteMatchupData,
+				isTechnical: false
+			});
 		});
 
 		redirect(302, '/');

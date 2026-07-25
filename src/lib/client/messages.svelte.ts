@@ -33,16 +33,13 @@ export const events = {
  */
 export function initMessageChannel() {
 	const connection = source('/events', {
-		close({ connect }) {
-			// reconnect after 1 second
-			setTimeout(() => {
-				connect();
-			}, 1000);
+		onclose() {
+			console.warn('Event stream closed');
 		},
-		error({ error }) {
-			console.error('Event stream error:', error);
+		onerror(event) {
+			console.error('Event stream error:', event);
 		},
-		open() {
+		onopen() {
 			console.log('Event stream connected');
 		},
 		cache: false
@@ -58,7 +55,7 @@ export function initMessageChannel() {
 			set.add(event.id);
 		}
 
-		let data: Event[] = [];
+		let data: Event[];
 		try {
 			data = JSON.parse(payload) as Event[];
 		} catch (error) {

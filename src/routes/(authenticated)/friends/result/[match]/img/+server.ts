@@ -29,22 +29,23 @@ export const GET: RequestHandler = async (event) => {
 	}
 
 	if (files.length === 1) {
-		// @ts-expect-error - stream is supported but not in the types
 		return new Response(await getFileStream(files[0].id), {
 			headers: {
-				'Content-Type': 'image/jpeg'
+				'Content-Type': 'image/jpeg',
+				'Cache-Control': 'private, max-age=300'
 			}
 		});
 	}
 
 	const [file1, file2] = await Promise.all(files.map((file) => getFile(file.id)));
 
-	const processor = new ImageVideoProcessor({ folder: matchup.id });
+	const processor = new ImageVideoProcessor();
 	const buffer = await processor.mergeSideBySide(file1, file2);
 
-	return new Response(buffer, {
+	return new Response(new Uint8Array(buffer), {
 		headers: {
-			'Content-Type': 'image/jpeg'
+			'Content-Type': 'image/jpeg',
+			'Cache-Control': 'private, max-age=300'
 		}
 	});
 };

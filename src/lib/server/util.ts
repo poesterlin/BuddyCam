@@ -17,7 +17,19 @@ export function validateUsername(username: unknown): username is string {
 }
 
 export function validatePassword(password: unknown): password is string {
-	return typeof password === 'string' && password.length >= 6 && password.length <= 255;
+	return typeof password === 'string' && password.length >= 10 && password.length <= 255;
+}
+
+export function safeRedirectPath(value: string | undefined, fallback = '/') {
+	if (!value) return fallback;
+
+	try {
+		const url = new URL(value, 'https://buddycam.invalid');
+		if (url.origin !== 'https://buddycam.invalid' || !url.pathname.startsWith('/')) return fallback;
+		return url.pathname + url.search + url.hash;
+	} catch {
+		return fallback;
+	}
 }
 
 export function assert(condition: any, message: string): asserts condition;
@@ -35,10 +47,8 @@ export function assert(condition: any, code: number | string, message?: string):
 export type MaybePromise<T> = T | Promise<T>;
 export type FormAction<
 	T,
-	Params extends Partial<Record<string, string>> = Partial<Record<string, string>>,
-	OutputData extends Record<string, any> | void = Record<string, any> | void,
-	RouteId extends string | null = string | null
-> = (event: RequestEvent<Params, RouteId>, form: T) => MaybePromise<OutputData>;
+	OutputData extends Record<string, any> | void = Record<string, any> | void
+> = (event: RequestEvent, form: T) => MaybePromise<OutputData>;
 
 export function validateForm<T extends ZodObject<any>, Form extends z.infer<T>>(
 	validator: T,
@@ -51,7 +61,7 @@ export function validateForm<T extends ZodObject<any>, Form extends z.infer<T>>(
 		const result = validator.safeParse(data);
 
 		if (!result.success) {
-			return fail(400, { errors: result.error.errors, message: 'Invalid form data' });
+			return fail(400, { errors: result.error.issues, message: 'Invalid form data' });
 		}
 
 		return action(event, result.data as Form);

@@ -1,16 +1,16 @@
 import { env } from '$env/dynamic/private';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import postgres, { type Notification } from 'pg';
 import { z } from 'zod';
 import type { eventsTable } from './schema';
 import { EventStore } from '../store';
 import { building } from '$app/environment';
 
-if (!env.DATABASE_URL) {
+if (!building && !env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set');
 }
 
-export const db = drizzle(env.DATABASE_URL);
+export const db = drizzle(env.DATABASE_URL || 'postgres://build:build@localhost/build');
 
 // Create a global event store
 export const eventStore = new EventStore();

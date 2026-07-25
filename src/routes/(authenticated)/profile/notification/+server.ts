@@ -51,7 +51,7 @@ export const POST: RequestHandler = async (event) => {
 			keys: keys as any
 		},
 		JSON.stringify({
-			type: EventType.SUBSCRIPTION,
+			type: EventType.SUBSCRIPTION
 		})
 	);
 

@@ -1,7 +1,14 @@
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { generateId, validateForm, validatePassword, validateUsername } from '$lib/server/util';
+import {
+	generateId,
+	safeRedirectPath,
+	validateForm,
+	validatePassword,
+	validateUsername
+} from '$lib/server/util';
+import { consumeRateLimit } from '$lib/server/rate-limit';
 import { hash } from '@node-rs/argon2';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -26,6 +33,17 @@ export const actions: Actions = {
 		}),
 		async (event, form) => {
 			const { username, password } = form;
+			const rateLimit = consumeRateLimit(`register:${event.getClientAddress()}`, {
+				limit: 5,
+				windowMs: 60 * 60_000
+			});
+			event.setHeaders({ 'RateLimit-Remaining': String(rateLimit.remaining) });
+			if (!rateLimit.allowed) {
+				event.setHeaders({ 'Retry-After': String(rateLimit.retryAfterSeconds) });
+				return fail(429, {
+					message: 'Too many registration attempts. Please try again later.'
+				});
+			}
 
 			if (!validateUsername(username)) {
 				return fail(400, {
@@ -78,14 +96,7 @@ export const actions: Actions = {
 				isTechnical: false
 			} as any);
 
-			let to = '/';
-			const redirectUrl = 'http://t' + form.redirect;
-			try {
-				const url = new URL(redirectUrl);
-				to = url.searchParams.get('redirect') || '/';
-			} catch {}
-
-			return redirect(302, to);
+			return redirect(302, safeRedirectPath(form.redirect));
 		}
 	)
 };

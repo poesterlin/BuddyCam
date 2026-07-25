@@ -1,9 +1,9 @@
 import { EventType, type FriendRequestAcceptedData, type FriendRequestData } from '$lib/events';
 import { db } from '$lib/server/db';
-import { eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
+import { blocksTable, eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
 import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
 import { error, redirect } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -26,9 +26,8 @@ export const load: PageServerLoad = async (event) => {
 		.where(eq(usersTable.id, targetUserID))
 		.limit(1);
 
-	// TODO: implement blocking users
-
 	assert(targetedUser, 400, 'User not found');
+	await assertNotBlocked(locals.user.id, targetedUser.id);
 
 	// check if they are already friends
 	const [existingFriendship] = await db
@@ -60,6 +59,7 @@ export const actions: Actions = {
 				.limit(1);
 
 			assert(targetedUser, 400, 'User not found');
+			await assertNotBlocked(locals.user.id, targetedUser.id);
 
 			if (locals.user.id === targetedUser.id) {
 				error(400, 'You are already friends with yourself, silly!');
@@ -164,3 +164,17 @@ export const actions: Actions = {
 		}
 	)
 };
+
+async function assertNotBlocked(userId: string, targetId: string) {
+	const [block] = await db
+		.select({ id: blocksTable.id })
+		.from(blocksTable)
+		.where(
+			or(
+				and(eq(blocksTable.blockerId, userId), eq(blocksTable.blockedId, targetId)),
+				and(eq(blocksTable.blockerId, targetId), eq(blocksTable.blockedId, userId))
+			)
+		)
+		.limit(1);
+	assert(!block, 403, 'This user is unavailable');
+}

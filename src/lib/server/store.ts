@@ -7,6 +7,7 @@ export class EventStore {
 
 	// Map of timeout IDs for cleanup
 	private readonly timeouts: Map<string, NodeJS.Timeout> = new Map();
+	private readonly waiters: Map<string, Set<() => void>> = new Map();
 
 	/**
 	 * Record an event for a user with a timeout
@@ -19,6 +20,8 @@ export class EventStore {
 
 		const userEventMap = this.userEvents.get(event.userId)!;
 		userEventMap.set(event.id, event);
+		for (const wake of this.waiters.get(event.userId) ?? []) wake();
+		this.waiters.delete(event.userId);
 
 		// Set timeout to send notification
 		const timeoutId = setTimeout(() => {
@@ -99,6 +102,26 @@ export class EventStore {
 		return events;
 	}
 
+	public async waitForUserEvents(userId: string, timeoutMs = 15_000): Promise<Event[]> {
+		const available = this.getUserEvents(userId);
+		if (available.length) return available;
+
+		await new Promise<void>((resolve) => {
+			const waiters = this.waiters.get(userId) ?? new Set();
+			const wake = () => {
+				clearTimeout(timer);
+				waiters.delete(wake);
+				if (waiters.size === 0) this.waiters.delete(userId);
+				resolve();
+			};
+			waiters.add(wake);
+			this.waiters.set(userId, waiters);
+			const timer = setTimeout(wake, timeoutMs);
+		});
+
+		return this.getUserEvents(userId);
+	}
+
 	public removeEvents(events: Event[]): void {
 		for (const event of events) {
 			this.removeEvent(event.id, event.userId);
@@ -122,6 +145,10 @@ export class EventStore {
 
 		this.timeouts.clear();
 		this.userEvents.clear();
+		for (const waiters of this.waiters.values()) {
+			for (const wake of waiters) wake();
+		}
+		this.waiters.clear();
 	}
 
 	/**

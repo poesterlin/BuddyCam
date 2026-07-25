@@ -66,6 +66,6 @@
 
 	.bounce {
 		animation: bounce 1.5s infinite ease-in-out;
-		tranform-origin: center;
+		transform-origin: center;
 	}
 </style>

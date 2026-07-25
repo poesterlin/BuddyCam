@@ -1,12 +1,13 @@
 import { EventType, type CaptureData, type UploadData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { eventsTable, filesTable, matchupTable } from '$lib/server/db/schema';
-import { uploadFile } from '$lib/server/s3';
+import { deleteFile, uploadFile } from '$lib/server/s3';
 import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { and, eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
+import { consumeRateLimit } from '$lib/server/rate-limit';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -49,6 +50,14 @@ export const actions: Actions = {
 		async (event, form) => {
 			const { user } = validateAuth(event);
 			const { match } = event.params;
+			const uploadLimit = consumeRateLimit(`capture:${user.id}`, {
+				limit: 10,
+				windowMs: 15 * 60_000
+			});
+			if (!uploadLimit.allowed) {
+				event.setHeaders({ 'Retry-After': String(uploadLimit.retryAfterSeconds) });
+				error(429, 'Too many upload attempts. Please try again later.');
+			}
 
 			assert(match, 400, 'match is required');
 
@@ -67,39 +76,40 @@ export const actions: Actions = {
 			assert(matchup.friendId, 400, 'friend has not joined yet');
 
 			const id = generateId();
-			await db.insert(filesTable).values({
-				id,
-				userId: user.id,
-				createdAt: new Date(),
-				matchupId: match
-			});
-
 			const other = user.id === matchup.userId ? matchup.friendId : matchup.userId;
-
-			await db.insert(eventsTable).values([
-				{
-					id: generateId(),
-					type: EventType.UPLOAD,
-					userId: other,
-					createdAt: new Date(),
-					isTechnical: true,
-					data: {
-						matchId: match
-					} satisfies UploadData
-				},
-				{
-					id: generateId(),
-					type: EventType.UPLOAD,
-					userId: user.id,
-					createdAt: new Date(),
-					isTechnical: true,
-					data: {
-						matchId: match
-					} satisfies UploadData
-				}
-			]);
-
 			await uploadFile(id, form.photo);
+			try {
+				await db.transaction(async (tx) => {
+					await tx.insert(filesTable).values({
+						id,
+						userId: user.id,
+						createdAt: new Date(),
+						matchupId: match
+					});
+
+					await tx.insert(eventsTable).values([
+						{
+							id: generateId(),
+							type: EventType.UPLOAD,
+							userId: other,
+							createdAt: new Date(),
+							isTechnical: true,
+							data: { matchId: match } satisfies UploadData
+						},
+						{
+							id: generateId(),
+							type: EventType.UPLOAD,
+							userId: user.id,
+							createdAt: new Date(),
+							isTechnical: true,
+							data: { matchId: match } satisfies UploadData
+						}
+					]);
+				});
+			} catch (cause) {
+				await deleteFile(id).catch(() => undefined);
+				throw cause;
+			}
 
 			redirect(302, '/friends/result/' + match);
 		}
@@ -107,6 +117,14 @@ export const actions: Actions = {
 	schedule: async (event) => {
 		const locals = validateAuth(event);
 		const { user } = locals;
+		const scheduleLimit = consumeRateLimit(`capture-schedule:${user.id}`, {
+			limit: 20,
+			windowMs: 60_000
+		});
+		if (!scheduleLimit.allowed) {
+			event.setHeaders({ 'Retry-After': String(scheduleLimit.retryAfterSeconds) });
+			error(429, 'Too many capture requests.');
+		}
 
 		const { match } = event.params;
 		const [matchup] = await db

@@ -4,10 +4,7 @@ import QRCode from 'qrcode';
 
 export const GET: RequestHandler = async (events) => {
 	const locals = validateAuth(events);
-	const { request } = events;
-
-	const host = request.headers.get('host');
-	const url = `https://${host}/friends/request?id=${locals.user.id}`;
+	const url = `${events.url.origin}/friends/request?id=${locals.user.id}`;
 
 	// generate QR code
 	const buffer = await new Promise<Buffer>((resolve, reject) => {
@@ -29,7 +26,7 @@ export const GET: RequestHandler = async (events) => {
 		);
 	});
 
-	return new Response(buffer, {
+	return new Response(new Uint8Array(buffer), {
 		headers: {
 			'Content-Type': 'image/png'
 		}

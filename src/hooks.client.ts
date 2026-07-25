@@ -1,10 +1,13 @@
-import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit';
-import { init } from '@sentry/sveltekit';
+import { handleErrorWithSentry } from '@sentry/sveltekit';
+import { init as initializeSentry } from '@sentry/sveltekit';
+import { env } from '$env/dynamic/public';
 
-init({
-	dsn: 'https://6553df36b67b69b498548c602f128991@o4505130185261056.ingest.us.sentry.io/4508938668474368',
-
-	tracesSampleRate: 1.0
-});
+export function init() {
+	initializeSentry({
+		dsn: env.PUBLIC_SENTRY_DSN,
+		tracesSampleRate: Number(env.PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+		enabled: Boolean(env.PUBLIC_SENTRY_DSN)
+	});
+}
 
 export const handleError = handleErrorWithSentry();

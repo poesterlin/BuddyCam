@@ -19,7 +19,7 @@ if ! command -v docker &> /dev/null; then
   handle_error "Docker is not installed. Please install docker."
 fi
 
-if ! command -v docker compose &> /dev/null; then
+if ! docker compose version &> /dev/null; then
   handle_error "Docker compose is not installed. Please install docker compose."
 fi
 
@@ -52,14 +52,9 @@ else
   STASHED=false
 fi
 
-# Check if there are any changes between local and remote
-if ! git diff --quiet HEAD origin/"$BRANCH"; then
-  echo "Remote changes detected, updating..."
-  git reset --hard origin/"$BRANCH" || handle_error "Failed to reset to remote."
-  docker compose up -d --build || handle_error "Failed to run docker compose up."
-else
-  echo "No remote changes detected, skipping update."
-fi
+echo "Updating with a fast-forward-only pull..."
+git pull --ff-only origin "$BRANCH" || handle_error "Local and remote history have diverged."
+docker compose up -d --build --wait || handle_error "Failed to deploy a healthy application."
 
 # Re-apply stashed changes if they were stashed
 if [[ "$STASHED" = true ]]; then

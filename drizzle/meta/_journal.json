@@ -1,1 +1,20 @@
-{"version":"6","dialect":"postgresql","entries":[]}
+{
+  "version": "6",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784970532691,
+      "tag": "0000_launch_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784970617351,
+      "tag": "0001_add_user_blocks",
+      "breakpoints": true
+    }
+  ]
+}

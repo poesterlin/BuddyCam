@@ -1,19 +1,13 @@
 import { db, eventStore } from '$lib/server/db';
 import { eventsTable } from '$lib/server/db/schema';
-import { sendPushNotification } from '$lib/server/push';
 import { validateAuth } from '$lib/server/util';
 import type { RequestHandler } from '@sveltejs/kit';
-import { and, eq, inArray, lte, or } from 'drizzle-orm';
+import { and, eq, inArray, lte } from 'drizzle-orm';
 import { produce } from 'sveltekit-sse';
 import { z } from 'zod';
 
-function delay(milliseconds: number) {
-	return new Promise(function run(resolve) {
-		setTimeout(resolve, milliseconds);
-	});
-}
-
-export const GET: RequestHandler = () => {
+export const GET: RequestHandler = (event) => {
+	validateAuth(event);
 	const stats = eventStore.getStats();
 
 	return new Response(JSON.stringify(stats), {
@@ -63,10 +57,9 @@ export const POST: RequestHandler = async (event) => {
 
 		while (true) {
 			try {
-				const events = eventStore.getUserEvents(locals.user.id);
+				const events = await eventStore.waitForUserEvents(locals.user.id);
 
 				if (events.length === 0) {
-					await delay(100);
 					continue;
 				}
 
@@ -108,9 +101,11 @@ export const POST: RequestHandler = async (event) => {
 							events.map((event) => event.id)
 						)
 					);
-			} catch (error) {}
-
-			await delay(100);
+			} catch (error) {
+				console.error('Event stream delivery failed', error);
+				lock.set(false);
+				return;
+			}
 		}
 	});
 };

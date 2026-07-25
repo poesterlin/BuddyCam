@@ -45,7 +45,9 @@
 				</div>
 
 				{#if form?.message}
-					<p class="text-sm text-balance text-center text-fuchsia-500" transition:fade>{form.message}</p>
+					<p class="text-center text-sm text-balance text-fuchsia-500" transition:fade>
+						{form.message}
+					</p>
 				{/if}
 
 				<input type="hidden" name="redirect" value={page.url.search} />

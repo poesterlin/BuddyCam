@@ -1,7 +1,7 @@
 import { building } from '$app/environment';
 import { env as privateEnv } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
-import { and, eq, lte } from 'drizzle-orm';
+import { and, eq, gt, isNull, or } from 'drizzle-orm';
 import webpush from 'web-push';
 import { db } from './db';
 import { subscriptionsTable, type Event } from './db/schema';
@@ -22,7 +22,13 @@ export async function sendPushNotification(userId: string, event: Event) {
 		.select()
 		.from(subscriptionsTable)
 		.where(
-			and(eq(subscriptionsTable.userId, userId), lte(subscriptionsTable.expirationTime, new Date()))
+			and(
+				eq(subscriptionsTable.userId, userId),
+				or(
+					isNull(subscriptionsTable.expirationTime),
+					gt(subscriptionsTable.expirationTime, new Date())
+				)
+			)
 		);
 
 	if (!subscriptions.length) {
@@ -49,6 +55,13 @@ export async function sendPushNotification(userId: string, event: Event) {
 			success ||= result.statusCode === 201 || result.statusCode === 200;
 		} catch (error) {
 			console.error('Failed to send push notification', error);
+			const statusCode =
+				typeof error === 'object' && error && 'statusCode' in error
+					? Number(error.statusCode)
+					: undefined;
+			if (statusCode === 404 || statusCode === 410) {
+				await db.delete(subscriptionsTable).where(eq(subscriptionsTable.id, subscription.id));
+			}
 		}
 	}
 

@@ -9,7 +9,7 @@
 		link
 	}: { link?: string; event: Event; clear: () => void; children: Snippet } = $props();
 
-	let diff = $state(new Date().getTime() - new Date(event.createdAt).getTime());
+	let diff = $state(0);
 
 	let hours = $derived(Math.floor(diff / (1000 * 60 * 60)));
 	let minutes = $derived(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)));
@@ -27,6 +27,7 @@
 	);
 
 	onMount(() => {
+		diff = Date.now() - new Date(event.createdAt).getTime();
 		const interval = setInterval(() => {
 			diff += 1000;
 		}, 1000);

@@ -4,7 +4,7 @@
 	import { IconBell, IconBellRingingFilled, IconUserCircle } from '@tabler/icons-svelte';
 
 	let { data } = $props();
-	let user = data.user;
+	let user = $derived(data.user);
 
 	const intl = new Intl.DateTimeFormat('en-US', {
 		month: 'long',
@@ -37,14 +37,14 @@
 <div
 	class="flex h-full flex-col items-center justify-center bg-gradient-to-br from-pink-100 to-yellow-100"
 >
-	<div class="card min-w-sm w-max space-y-6 rounded-3xl bg-white p-8 text-center shadow-2xl">
+	<div class="card w-max min-w-sm space-y-6 rounded-3xl bg-white p-8 text-center shadow-2xl">
 		<IconUserCircle class="mx-auto h-24 w-24 text-rose-500"></IconUserCircle>
 
 		<h1 class="text-4xl font-extrabold text-rose-500 drop-shadow-md">{user.username} 💖</h1>
 
 		<!-- notifications -->
 		<button
-			class="mx-auto mb-12 flex items-center justify-center gap-4 rounded-full bg-gradient-to-l from-rose-400 to-amber-400 px-6 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-rose-200"
+			class="mx-auto mb-12 flex items-center justify-center gap-4 rounded-full bg-gradient-to-l from-rose-400 to-amber-400 px-6 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
 			onclick={addNotification}
 		>
 			<span> Enable Notifications</span>
@@ -76,14 +76,14 @@
 		<div class="flex flex-col space-y-8">
 			<form method="POST" action="/logout">
 				<button
-					class="rounded-full bg-white px-6 py-3 font-semibold tracking-wider text-rose-500 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-rose-200"
+					class="rounded-full bg-white px-6 py-3 font-semibold tracking-wider text-rose-500 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
 					type="submit">Logout ✨</button
 				>
 			</form>
 
 			<form action="?/delete" method="POST">
 				<button
-					class="rounded-full bg-red-400 px-4 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-rose-200"
+					class="rounded-full bg-red-400 px-4 py-3 font-semibold tracking-wider text-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl focus:ring-2 focus:ring-rose-200 focus:outline-none"
 					type="submit"
 				>
 					Delete Account 🥺</button
@@ -99,12 +99,6 @@
 	}
 
 	button {
-		.wiggle {
-			@starting-style {
-				animation: wiggle 0.5s forwards 2;
-			}
-		}
-
 		&:hover {
 			.wiggle {
 				animation: wiggle 0.5s infinite;

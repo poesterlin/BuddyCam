@@ -43,7 +43,7 @@ export const GET: RequestHandler = async (event) => {
 		pairs.push({ first, second });
 	}
 
-	const processor = new ImageVideoProcessor({ folder: friend, fps: 2 });
+	const processor = new ImageVideoProcessor({ fps: 2 });
 	const stream = await processor.processImagesAndCreateVideo(pairs);
 
 	// @ts-expect-error - Stream is not a valid ResponseInit but it works

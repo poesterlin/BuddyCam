@@ -19,7 +19,6 @@ export const load: PageServerLoad = async (event) => {
 
 	assert(friend, 404, 'Friend not found');
 
-	// TODO: this is not working
 	const [friendship] = await db
 		.select()
 		.from(friendsTable)
@@ -34,7 +33,6 @@ export const load: PageServerLoad = async (event) => {
 
 	assert(friendship, 404, 'Friendship not found');
 
-	// TODO: this is not working
 	const matchups = await db
 		.select()
 		.from(matchupTable)

@@ -17,14 +17,14 @@
 	let {
 		upload,
 		isUploading = $bindable(),
-		timeDiff,
-		captureAt,
+		serverToMonoOffset,
+		captureRequest,
 		onschedule
 	}: {
 		upload: (blob: Blob) => Promise<void>;
-		timeDiff: number;
+		serverToMonoOffset: number;
 		isUploading: boolean;
-		captureAt: number;
+		captureRequest: { id: string; targetMono: number } | null;
 		onschedule: () => void;
 	} = $props();
 
@@ -40,22 +40,44 @@
 	let stopRendering = false;
 	let shouldCapture = false;
 	let shouldUpload = false;
+	let armedCaptureId: string | null = null;
+	let captureTimer: ReturnType<typeof setTimeout> | undefined;
+	let captureAnimationFrame: number | undefined;
+	let captureVideoFrame: number | undefined;
 
 	// Triggered by parent via captureAt prop (P2P path) or SSE event (server fallback)
-	function scheduleCaptureAt(ts: number) {
-		timestamp = ts;
-		const timeRemaining = Math.max(ts - now + timeDiff, 300);
+	function scheduleCaptureAt(targetMono: number, id: string) {
+		if (armedCaptureId === id) return;
+		armedCaptureId = id;
+		clearTimeout(captureTimer);
+		if (captureAnimationFrame !== undefined) cancelAnimationFrame(captureAnimationFrame);
+		if (captureVideoFrame !== undefined && 'cancelVideoFrameCallback' in videoRef) {
+			videoRef.cancelVideoFrameCallback(captureVideoFrame);
+		}
+		timestamp = Date.now() + Math.max(0, targetMono - performance.now());
+		const timeRemaining = Math.max(targetMono - performance.now(), 0);
 		console.log('Capture scheduled in', timeRemaining, 'ms');
-		setTimeout(() => {
+		const fire = () => {
+			const remaining = targetMono - performance.now();
+			if (remaining > 1) {
+				if ('requestVideoFrameCallback' in videoRef) {
+					captureVideoFrame = videoRef.requestVideoFrameCallback(fire);
+				} else {
+					captureAnimationFrame = requestAnimationFrame(fire);
+				}
+				return;
+			}
 			shouldUpload = true;
 			takePicture();
-		}, timeRemaining);
+		};
+		// Let a coarse timer do most of the wait, then align to the display/video render loop.
+		captureTimer = setTimeout(fire, Math.max(0, timeRemaining - 80));
 	}
 
 	$effect(() => {
-		if (captureAt > 0) {
+		if (captureRequest) {
 			console.log('Capture triggered via P2P prop');
-			scheduleCaptureAt(captureAt);
+			scheduleCaptureAt(captureRequest.targetMono, captureRequest.id);
 		}
 	});
 
@@ -65,7 +87,9 @@
 		if (shouldTrigger) {
 			console.log('Received capture event via SSE (server fallback)');
 			const data = shouldTrigger.event.data as CaptureData;
-			scheduleCaptureAt(data.timestamp);
+			if (data.matchId === location.pathname.split('/').pop()) {
+				scheduleCaptureAt(data.timestamp - serverToMonoOffset, `server-${shouldTrigger.event.id}`);
+			}
 			shouldTrigger.clear();
 		}
 	});
@@ -86,6 +110,11 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(captureTimer);
+		if (captureAnimationFrame !== undefined) cancelAnimationFrame(captureAnimationFrame);
+		if (captureVideoFrame !== undefined && 'cancelVideoFrameCallback' in videoRef) {
+			videoRef.cancelVideoFrameCallback(captureVideoFrame);
+		}
 		if (stream) {
 			stream.getTracks().forEach((track) => track.stop());
 		}
@@ -347,7 +376,6 @@
 			takePicture();
 		}
 	}
-
 </script>
 
 <svelte:window onresize={handleResize} onorientationchange={handleResize} onkeyup={debug} />
@@ -356,7 +384,7 @@
 <div class="relative overflow-hidden rounded-3xl border-8 border-white bg-white p-2 shadow-2xl">
 	{#if webglSupported}
 		<button
-			class="absolute right-4 top-4 z-10 rounded-full bg-white p-2 shadow-md hover:shadow-lg focus:outline-none focus:ring-0"
+			class="absolute top-4 right-4 z-10 rounded-full bg-white p-2 shadow-md hover:shadow-lg focus:ring-0 focus:outline-none"
 			onclick={() => {
 				useWebGl = !useWebGl;
 				startRender();
@@ -413,7 +441,7 @@
 		>
 			📸 Uploading...
 
-			<div class="h-6 w-6 animate-spin rounded-full border-b-2 border-t-2 border-rose-500">
+			<div class="h-6 w-6 animate-spin rounded-full border-t-2 border-b-2 border-rose-500">
 				<IconLoader3></IconLoader3>
 			</div>
 		</button>
@@ -421,7 +449,7 @@
 		<button
 			onclick={onschedule}
 			disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0}
-			class="hover:brightness-120 relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:rotate-3 hover:scale-110 hover:before:opacity-100 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+			class="relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:scale-110 hover:rotate-3 hover:brightness-120 hover:before:opacity-100 focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 		>
 			📸 Smile!
 		</button>
