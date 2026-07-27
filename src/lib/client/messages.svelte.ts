@@ -5,6 +5,33 @@ import { toastStore } from './toast.svelte';
 // state rune to store new events
 const newEvents = $state<{ event: Event<any>; clear: () => void }[]>([]);
 const count = $derived(newEvents.reduce((acc, { event }) => acc + (event.isTechnical ? 0 : 1), 0));
+const pendingDeleteIds = new Set<string>();
+let deleteTimer: ReturnType<typeof setTimeout> | undefined;
+
+function scheduleEventDeletion(id: string) {
+	pendingDeleteIds.add(id);
+	clearTimeout(deleteTimer);
+	deleteTimer = setTimeout(flushEventDeletions, 100);
+}
+
+async function flushEventDeletions() {
+	const ids = [...pendingDeleteIds];
+	if (ids.length === 0) return;
+	ids.forEach((id) => pendingDeleteIds.delete(id));
+
+	try {
+		const response = await fetch('/events', {
+			method: 'DELETE',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ ids })
+		});
+		if (!response.ok) throw new Error(`Event acknowledgement failed: ${response.status}`);
+	} catch (error) {
+		console.error(error);
+		ids.forEach((id) => pendingDeleteIds.add(id));
+		deleteTimer = setTimeout(flushEventDeletions, 1000);
+	}
+}
 
 export const events = {
 	new: newEvents,
@@ -14,12 +41,12 @@ export const events = {
 			newEvents.splice(index, 1);
 		}
 
-		fetch(`/events?id=${id}`, { method: 'DELETE' }).then(() => {
-			console.log('event cleared');
-		});
+		scheduleEventDeletion(id);
 	},
 	clearAll: () => {
 		newEvents.splice(0, newEvents.length);
+		pendingDeleteIds.clear();
+		clearTimeout(deleteTimer);
 		fetch('/events?all', { method: 'DELETE' }).then(() => {
 			console.log('all events cleared');
 		});

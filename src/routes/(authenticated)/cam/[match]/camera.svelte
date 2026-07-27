@@ -15,16 +15,18 @@
 	let gl: WebGLRenderingContext | null = null;
 
 	let {
-		upload,
+		onrecorded,
 		isUploading = $bindable(),
 		serverToMonoOffset,
 		captureRequest,
+		canSchedule,
 		onschedule
 	}: {
-		upload: (blob: Blob) => Promise<void>;
-		serverToMonoOffset: number;
+		onrecorded: (blob: Blob, attemptId: string) => Promise<void>;
+		serverToMonoOffset: number | null;
 		isUploading: boolean;
 		captureRequest: { id: string; targetMono: number } | null;
+		canSchedule: boolean;
 		onschedule: () => void;
 	} = $props();
 
@@ -39,7 +41,6 @@
 
 	let stopRendering = false;
 	let shouldCapture = false;
-	let shouldUpload = false;
 	let armedCaptureId: string | null = null;
 	let captureTimer: ReturnType<typeof setTimeout> | undefined;
 	let captureAnimationFrame: number | undefined;
@@ -67,7 +68,6 @@
 				}
 				return;
 			}
-			shouldUpload = true;
 			takePicture();
 		};
 		// Let a coarse timer do most of the wait, then align to the display/video render loop.
@@ -85,12 +85,25 @@
 	$effect(() => {
 		const shouldTrigger = events.new.find(({ event }) => event.type === EventType.CAPTURE);
 		if (shouldTrigger) {
-			console.log('Received capture event via SSE (server fallback)');
 			const data = shouldTrigger.event.data as CaptureData;
-			if (data.matchId === location.pathname.split('/').pop()) {
-				scheduleCaptureAt(data.timestamp - serverToMonoOffset, `server-${shouldTrigger.event.id}`);
+			if (!data.attemptId) {
+				console.warn('Discarding legacy capture event without an attempt ID');
+				shouldTrigger.clear();
+				return;
 			}
-			shouldTrigger.clear();
+			if (data.matchId === location.pathname.split('/').pop() && serverToMonoOffset !== null) {
+				const targetMono = data.timestamp - serverToMonoOffset;
+				const remaining = targetMono - performance.now();
+				if (remaining >= 150) {
+					console.log('Received capture event via SSE (server fallback)');
+					scheduleCaptureAt(targetMono, data.attemptId);
+				} else {
+					console.warn('Discarding expired capture event', shouldTrigger.event.id);
+				}
+				shouldTrigger.clear();
+			} else if (data.matchId !== location.pathname.split('/').pop()) {
+				shouldTrigger.clear();
+			}
 		}
 	});
 
@@ -196,12 +209,9 @@
 				return;
 			}
 
-			if (shouldUpload) {
-				console.log('Uploading photo...');
-				upload(blob);
-			} else {
-				console.log('Photo captured but not uploaded, rendering is still active');
-			}
+			assert(armedCaptureId, 'Capture attempt is missing');
+			await onrecorded(blob, armedCaptureId);
+			timestamp = 0;
 		} catch (error) {
 			toastStore.show('Error uploading photo');
 			console.error(error);
@@ -448,7 +458,7 @@
 	{:else}
 		<button
 			onclick={onschedule}
-			disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0}
+			disabled={isUploading || !videoRef || !canvasRef || timestamp !== 0 || !canSchedule}
 			class="relative rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-6 py-3 text-xl font-extrabold text-white shadow-md transition-all duration-300 before:absolute before:inset-0 before:z-[-1] before:rounded-full before:bg-gradient-to-br before:from-purple-500 before:to-teal-500 before:opacity-0 before:transition-opacity before:duration-500 hover:scale-110 hover:rotate-3 hover:brightness-120 hover:before:opacity-100 focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 		>
 			📸 Smile!

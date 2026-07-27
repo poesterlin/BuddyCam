@@ -1,4 +1,4 @@
-import { EventType, type CaptureData, type UploadData } from '$lib/events';
+import { EventType, type CaptureData, type RecordedData, type UploadData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { filesTable, matchupTable } from '$lib/server/db/schema';
 import { queueTechnicalEvents } from '$lib/server/event-service';
@@ -46,7 +46,8 @@ export const load: PageServerLoad = async (event) => {
 export const actions: Actions = {
 	capture: validateForm(
 		z.object({
-			photo: z.instanceof(File)
+			photo: z.instanceof(File),
+			attemptId: z.string().min(1).max(64)
 		}),
 		async (event, form) => {
 			const { user } = validateAuth(event);
@@ -76,6 +77,15 @@ export const actions: Actions = {
 			assert(matchup, 404, 'match not found');
 			assert(matchup.friendId, 400, 'friend has not joined yet');
 
+			const [existingFile] = await db
+				.select({ id: filesTable.id })
+				.from(filesTable)
+				.where(and(eq(filesTable.matchupId, match), eq(filesTable.userId, user.id)))
+				.limit(1);
+			if (existingFile) {
+				redirect(302, '/friends/result/' + match);
+			}
+
 			const id = generateId();
 			const other = user.id === matchup.userId ? matchup.friendId : matchup.userId;
 			await uploadFile(id, form.photo);
@@ -99,18 +109,60 @@ export const actions: Actions = {
 					type: EventType.UPLOAD,
 					userId: other,
 					createdAt: new Date(),
-					data: { matchId: match } satisfies UploadData
+					data: { matchId: match, attemptId: form.attemptId } satisfies UploadData
 				},
 				{
 					id: generateId(),
 					type: EventType.UPLOAD,
 					userId: user.id,
 					createdAt: new Date(),
-					data: { matchId: match } satisfies UploadData
+					data: { matchId: match, attemptId: form.attemptId } satisfies UploadData
 				}
 			]);
 
 			redirect(302, '/friends/result/' + match);
+		}
+	),
+	recorded: validateForm(
+		z.object({ attemptId: z.string().min(1).max(64) }),
+		async (event, form) => {
+			const { user } = validateAuth(event);
+			const { match } = event.params;
+			assert(match, 400, 'match is required');
+			const recordedLimit = consumeRateLimit(`capture-recorded:${user.id}`, {
+				limit: 30,
+				windowMs: 60_000
+			});
+			if (!recordedLimit.allowed) {
+				event.setHeaders({ 'Retry-After': String(recordedLimit.retryAfterSeconds) });
+				error(429, 'Too many capture confirmations.');
+			}
+			const [matchup] = await db
+				.select()
+				.from(matchupTable)
+				.where(
+					and(
+						eq(matchupTable.id, match),
+						or(eq(matchupTable.friendId, user.id), eq(matchupTable.userId, user.id))
+					)
+				)
+				.limit(1);
+
+			assert(matchup, 404, 'match not found');
+			assert(matchup.friendId, 400, 'friend has not joined yet');
+			const other = user.id === matchup.userId ? matchup.friendId : matchup.userId;
+			await queueTechnicalEvents({
+				id: generateId(),
+				type: EventType.RECORDED,
+				userId: other,
+				createdAt: new Date(),
+				data: {
+					matchId: match,
+					attemptId: form.attemptId
+				} satisfies RecordedData
+			});
+
+			return { recorded: true };
 		}
 	),
 	schedule: async (event) => {
@@ -148,6 +200,7 @@ export const actions: Actions = {
 
 		const delay = hasFiles ? 0 : 1000 * 4; // dont delay if someone has already uploaded
 		const timestamp = Date.now() + delay;
+		const attemptId = generateId();
 
 		await queueTechnicalEvents([
 			{
@@ -157,7 +210,8 @@ export const actions: Actions = {
 				createdAt: new Date(),
 				data: {
 					matchId: match,
-					timestamp
+					timestamp,
+					attemptId
 				} satisfies CaptureData
 			},
 			{
@@ -167,7 +221,8 @@ export const actions: Actions = {
 				createdAt: new Date(),
 				data: {
 					matchId: match,
-					timestamp
+					timestamp,
+					attemptId
 				} satisfies CaptureData
 			}
 		]);

@@ -3,7 +3,7 @@ import { eventsTable } from '$lib/server/db/schema';
 import { eventHub } from '$lib/server/event-hub';
 import { validateAuth } from '$lib/server/util';
 import type { RequestHandler } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, lt } from 'drizzle-orm';
 import { produce } from 'sveltekit-sse';
 import { z } from 'zod';
 
@@ -22,6 +22,17 @@ export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
 
 	return produce(async function start({ emit, lock }) {
+		// Technical events are retryable delivery records, not long-term notifications.
+		await db
+			.delete(eventsTable)
+			.where(
+				and(
+					eq(eventsTable.userId, locals.user.id),
+					eq(eventsTable.isTechnical, true),
+					lt(eventsTable.createdAt, new Date(Date.now() - 10 * 60_000))
+				)
+			);
+
 		const unsubscribe = eventHub.subscribe(locals.user.id, (event) => {
 			const { error } = emit('message', JSON.stringify([event]));
 			if (error) {
@@ -66,11 +77,14 @@ export const DELETE: RequestHandler = async (event) => {
 		return new Response(null, { status: 204 });
 	}
 
-	const id = z.string().parse(url.searchParams.get('id'));
+	const contentType = event.request.headers.get('content-type');
+	const ids = contentType?.includes('application/json')
+		? z.object({ ids: z.array(z.string()).min(1).max(500) }).parse(await event.request.json()).ids
+		: [z.string().parse(url.searchParams.get('id'))];
 
 	await db
 		.delete(eventsTable)
-		.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.id, id)));
+		.where(and(eq(eventsTable.userId, locals.user.id), inArray(eventsTable.id, ids)));
 
 	return new Response(null, { status: 204 });
 };

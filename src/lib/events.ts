@@ -6,6 +6,7 @@ export enum EventType {
 	READY = 'READY',
 	START = 'START',
 	CAPTURE = 'CAPTURE',
+	RECORDED = 'RECORDED',
 	UPLOAD = 'UPLOAD',
 	DELETE_MATCHUP = 'DELETE_MATCHUP',
 	SUBSCRIPTION = 'SUBSCRIPTION',
@@ -28,9 +29,15 @@ export interface StartData {
 
 export interface CaptureData extends StartData {
 	timestamp: number;
+	attemptId: string;
 }
 
-export type UploadData = StartData;
+export interface AttemptData extends StartData {
+	attemptId: string;
+}
+
+export type RecordedData = AttemptData;
+export type UploadData = AttemptData;
 export interface DeleteMatchupData extends StartData {
 	fromUsername: string;
 }
