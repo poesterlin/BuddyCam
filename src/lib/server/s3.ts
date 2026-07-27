@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { S3Client } from 'bun';
 import sharp from 'sharp';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -10,19 +11,12 @@ function getStorage() {
 		throw new Error('MinIO configuration is incomplete');
 	}
 
-	const protocol = env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
-	const endpoint = new URL(
-		MINIO_URL.startsWith('http://') || MINIO_URL.startsWith('https://')
-			? MINIO_URL
-			: `${protocol}://${MINIO_URL}`
-	);
-
 	return {
-		client: new Bun.S3Client({
+		client: new S3Client({
 			accessKeyId: MINIO_KEY,
 			secretAccessKey: MINIO_SECRET,
 			bucket: MINIO_BUCKET,
-			endpoint: endpoint.toString(),
+			endpoint: MINIO_URL,
 			region: env.S3_REGION || 'us-east-1'
 		})
 	};
