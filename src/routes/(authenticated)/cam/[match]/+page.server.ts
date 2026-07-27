@@ -1,7 +1,7 @@
 import { EventType, type CaptureData, type UploadData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { filesTable, matchupTable } from '$lib/server/db/schema';
-import { publishTransientEvents } from '$lib/server/event-service';
+import { queueTechnicalEvents } from '$lib/server/event-service';
 import { deleteFile, uploadFile } from '$lib/server/s3';
 import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
 import { error, redirect } from '@sveltejs/kit';
@@ -93,7 +93,7 @@ export const actions: Actions = {
 				throw cause;
 			}
 
-			publishTransientEvents([
+			await queueTechnicalEvents([
 				{
 					id: generateId(),
 					type: EventType.UPLOAD,
@@ -149,7 +149,7 @@ export const actions: Actions = {
 		const delay = hasFiles ? 0 : 1000 * 4; // dont delay if someone has already uploaded
 		const timestamp = Date.now() + delay;
 
-		publishTransientEvents([
+		await queueTechnicalEvents([
 			{
 				id: generateId(),
 				type: EventType.CAPTURE,

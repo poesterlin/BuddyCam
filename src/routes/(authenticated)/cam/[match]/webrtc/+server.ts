@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { matchupTable } from '$lib/server/db/schema';
-import { publishTransientEvents } from '$lib/server/event-service';
+import { queueTechnicalEvents } from '$lib/server/event-service';
 import { assert, generateId, validateAuth } from '$lib/server/util';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
@@ -122,11 +122,9 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	console.log('Parsed body:', body, locals.user.username, { matchup });
-
 	const other = isOwner ? matchup.friendId : matchup.userId;
 	assert(other, 'Other user not found');
-	publishTransientEvents({
+	await queueTechnicalEvents({
 		id: generateId(),
 		userId: other,
 		type: EventType.WEBRTC,

@@ -10,7 +10,9 @@ export const events = {
 	new: newEvents,
 	clear: (id: string) => {
 		const index = newEvents.findIndex((e) => e.event.id === id);
-		newEvents.splice(index, 1);
+		if (index >= 0) {
+			newEvents.splice(index, 1);
+		}
 
 		fetch(`/events?id=${id}`, { method: 'DELETE' }).then(() => {
 			console.log('event cleared');
@@ -33,8 +35,11 @@ export const events = {
  */
 export function initMessageChannel() {
 	const connection = source('/events', {
-		onclose() {
+		onclose({ connect, isLocal }) {
 			console.warn('Event stream closed');
+			if (!isLocal) {
+				setTimeout(connect, 1000);
+			}
 		},
 		onerror(event) {
 			console.error('Event stream error:', event);

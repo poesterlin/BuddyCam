@@ -50,3 +50,26 @@ export function publishTransientEvents(
 	eventHub.publishAll(events);
 	return events;
 }
+
+/**
+ * Queue technical control events that must survive short SSE disconnects and page navigation.
+ * Clients acknowledge these events by deleting them through the events endpoint.
+ */
+export async function queueTechnicalEvents(
+	values: TransientEventInsert | TransientEventInsert[]
+): Promise<Event[]> {
+	const created = await db
+		.insert(eventsTable)
+		.values(
+			asArray(values).map((value) => ({
+				...value,
+				isTechnical: true,
+				persistent: true,
+				read: false
+			}))
+		)
+		.returning();
+
+	eventHub.publishAll(created);
+	return created;
+}

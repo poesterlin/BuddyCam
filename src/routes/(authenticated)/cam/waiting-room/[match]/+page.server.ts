@@ -1,7 +1,7 @@
 import { EventType, type StartData } from '$lib/events';
 import { db } from '$lib/server/db';
 import { friendsTable, matchupTable } from '$lib/server/db/schema';
-import { publishTransientEvents } from '$lib/server/event-service';
+import { queueTechnicalEvents } from '$lib/server/event-service';
 import { assert, generateId, validateAuth } from '$lib/server/util';
 import { redirect } from '@sveltejs/kit';
 import { and, eq, isNull } from 'drizzle-orm';
@@ -51,7 +51,7 @@ export const load: PageServerLoad = async (event) => {
 			.returning();
 		assert(claimed, 409, 'This matchup has already been claimed');
 
-		publishTransientEvents([
+		await queueTechnicalEvents([
 			{
 				id: generateId(),
 				userId: matchup.userId,
