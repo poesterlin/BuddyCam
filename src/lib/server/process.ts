@@ -261,29 +261,23 @@ export class ImageVideoProcessor {
 		});
 	}
 
-	private async pipeFramesToStream(imagePairs: ImagePair[], stream: PassThrough): Promise<void> {
+	private async *generateFrames(imagePairs: ImagePair[]): AsyncGenerator<Buffer> {
 		const BATCH_SIZE = 8;
-		try {
-			for (let i = 0; i < imagePairs.length; i += BATCH_SIZE) {
-				const batch = imagePairs.slice(i, i + BATCH_SIZE);
-				const buffers = await Promise.all(
-					batch.map((pair) => this.mergeImages(pair.first, pair.second))
-				);
-				for (const buffer of buffers) {
-					stream.write(buffer);
-				}
+		for (let i = 0; i < imagePairs.length; i += BATCH_SIZE) {
+			const batch = imagePairs.slice(i, i + BATCH_SIZE);
+			const buffers = await Promise.all(
+				batch.map((pair) => this.mergeImages(pair.first, pair.second))
+			);
+			for (const buffer of buffers) {
+				yield buffer;
 			}
-			stream.end();
-		} catch (err) {
-			stream.destroy(err instanceof Error ? err : new Error(String(err)));
 		}
 	}
 
 	public async processImagesAndCreateVideo(
 		imagePairs: ImagePair[]
 	): Promise<NodeJS.ReadableStream> {
-		const frameStream = new PassThrough();
-		this.pipeFramesToStream(imagePairs, frameStream);
+		const frameStream = Readable.from(this.generateFrames(imagePairs));
 		return this.createVideoFromStream(frameStream);
 	}
 }

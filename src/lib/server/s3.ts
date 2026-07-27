@@ -5,7 +5,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_INPUT_PIXELS = 20_000_000;
 
 function getStorage() {
-	const { MINIO_KEY, MINIO_SECRET, MINIO_URL, MINIO_BUCKET, MINIO_PORT } = env;
+	const { MINIO_KEY, MINIO_SECRET, MINIO_URL, MINIO_BUCKET } = env;
 	if (!MINIO_KEY || !MINIO_SECRET || !MINIO_URL || !MINIO_BUCKET) {
 		throw new Error('MinIO configuration is incomplete');
 	}
@@ -16,7 +16,6 @@ function getStorage() {
 			? MINIO_URL
 			: `${protocol}://${MINIO_URL}`
 	);
-	if (!endpoint.port && MINIO_PORT) endpoint.port = MINIO_PORT;
 
 	return {
 		client: new Bun.S3Client({
