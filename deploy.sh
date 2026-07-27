@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Get the current branch name
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -39,11 +39,11 @@ if ! git diff --quiet; then
       STASHED=true
       ;;
     [nN]*)
-      echo "Continuing without stashing.  Local changes may be overwritten."
+      echo "Continuing without stashing. Tracked local changes will be discarded if remote changes are deployed."
       STASHED=false
       ;;
     *)
-      echo "Invalid input.  Continuing without stashing.  Local changes may be overwritten."
+      echo "Invalid input. Continuing without stashing. Tracked local changes will be discarded if remote changes are deployed."
       STASHED=false
       ;;
   esac
@@ -52,9 +52,26 @@ else
   STASHED=false
 fi
 
-echo "Updating with a fast-forward-only pull..."
-git pull --ff-only origin "$BRANCH" || handle_error "Local and remote history have diverged."
-docker compose up -d --build --wait || handle_error "Failed to deploy a healthy application."
+# Check if there are any changes between local and remote
+if ! git diff --quiet HEAD origin/"$BRANCH"; then
+  echo "Remote changes detected, updating..."
+  git reset --hard origin/"$BRANCH" || handle_error "Failed to reset to remote."
+  docker compose up -d --build --wait || handle_error "Failed to deploy a healthy application."
+  echo "Removing superseded Docker images..."
+  docker image prune -f || echo "Warning: Failed to prune Docker images."
+else
+  echo "No remote changes detected."
+  read -r -p "Do you want to restart or start the existing stack? (y/n): " restart_choice
+  case "$restart_choice" in
+    [yY]*)
+      echo "Restarting the existing stack..."
+      docker compose up -d --force-recreate --wait || handle_error "Failed to restart the stack."
+      ;;
+    *)
+      echo "Leaving the existing stack unchanged."
+      ;;
+  esac
+fi
 
 # Re-apply stashed changes if they were stashed
 if [[ "$STASHED" = true ]]; then
