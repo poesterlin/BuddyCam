@@ -6,6 +6,7 @@ import { redirect } from '@sveltejs/kit';
 import { and, eq, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
+import { publishPersistedEvents } from '$lib/server/event-service';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -60,7 +61,7 @@ export const actions: Actions = {
 
 		assert(request, 400, 'Friend request not found');
 
-		await db.transaction(async (tx) => {
+		const createdEvent = await db.transaction(async (tx) => {
 			await tx.update(friendsTable).set({ accepted: true }).where(eq(friendsTable.id, request.id));
 			await tx.insert(friendsTable).values({
 				id: generateId(),
@@ -69,18 +70,25 @@ export const actions: Actions = {
 				accepted: true,
 				createdAt: new Date()
 			});
-			await tx.insert(eventsTable).values({
-				id: generateId(),
-				userId: id,
-				type: EventType.FRIEND_REQUEST_ACCEPTED,
-				isTechnical: false,
-				data: {
-					fromId: locals.user.id,
-					fromUsername: locals.user.username
-				} satisfies FriendRequestAcceptedData,
-				createdAt: new Date()
-			});
+			const [created] = await tx
+				.insert(eventsTable)
+				.values({
+					id: generateId(),
+					userId: id,
+					type: EventType.FRIEND_REQUEST_ACCEPTED,
+					isTechnical: false,
+					persistent: true,
+					read: false,
+					data: {
+						fromId: locals.user.id,
+						fromUsername: locals.user.username
+					} satisfies FriendRequestAcceptedData,
+					createdAt: new Date()
+				})
+				.returning();
+			return created;
 		});
+		publishPersistedEvents(createdEvent);
 
 		// delete the friend request event
 		await deleteFriendRequestEvent(id, locals);

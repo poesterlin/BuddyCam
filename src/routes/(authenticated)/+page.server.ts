@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
-import { eventsTable, friendsTable, matchupTable } from '$lib/server/db/schema';
+import { friendsTable, matchupTable } from '$lib/server/db/schema';
+import { createDurableEvents } from '$lib/server/event-service';
 import { generateId, validateAuth } from '$lib/server/util';
 import { and, eq, gt, inArray, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
@@ -76,13 +77,11 @@ export const actions: Actions = {
 					fromUsername: locals.user.username,
 					fromId: locals.user.id,
 					matchId
-				} satisfies ReadyRequestData,
-				isTechnical: false,
-				persistent: true
-			} satisfies typeof eventsTable.$inferInsert;
+				} satisfies ReadyRequestData
+			};
 		});
 
-		await db.insert(eventsTable).values(notifications);
+		await createDurableEvents(notifications);
 
 		redirect(302, '/cam/waiting-room/' + matchId);
 	}

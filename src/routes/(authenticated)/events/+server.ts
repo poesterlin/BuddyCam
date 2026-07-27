@@ -1,14 +1,15 @@
-import { db, eventStore } from '$lib/server/db';
+import { db } from '$lib/server/db';
 import { eventsTable } from '$lib/server/db/schema';
+import { eventHub } from '$lib/server/event-hub';
 import { validateAuth } from '$lib/server/util';
 import type { RequestHandler } from '@sveltejs/kit';
-import { and, eq, inArray, lte } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { produce } from 'sveltekit-sse';
 import { z } from 'zod';
 
 export const GET: RequestHandler = (event) => {
 	validateAuth(event);
-	const stats = eventStore.getStats();
+	const stats = eventHub.getStats();
 
 	return new Response(JSON.stringify(stats), {
 		headers: {
@@ -20,26 +21,16 @@ export const GET: RequestHandler = (event) => {
 export const POST: RequestHandler = async (event) => {
 	const locals = validateAuth(event);
 
-	// clear all impersistant events older than 1 hour
-	const cutoffDate = new Date();
-	cutoffDate.setHours(cutoffDate.getHours() - 1);
-
-	await db
-		.delete(eventsTable)
-		.where(
-			and(
-				eq(eventsTable.userId, locals.user.id),
-				eq(eventsTable.persistent, false),
-				lte(eventsTable.createdAt, cutoffDate)
-			)
-		);
-
-	// clear all read events
-	await db
-		.delete(eventsTable)
-		.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.read, true)));
-
 	return produce(async function start({ emit, lock }) {
+		const unsubscribe = eventHub.subscribe(locals.user.id, (event) => {
+			const { error } = emit('message', JSON.stringify([event]));
+			if (error) {
+				lock.set(false);
+				return false;
+			}
+			return true;
+		});
+
 		// send all persistent events that have not been read first
 		const persistent = await db
 			.select()
@@ -53,60 +44,15 @@ export const POST: RequestHandler = async (event) => {
 			)
 			.orderBy(eventsTable.createdAt);
 
-		emit('message', JSON.stringify(persistent));
-
-		while (true) {
-			try {
-				const events = await eventStore.waitForUserEvents(locals.user.id);
-
-				if (events.length === 0) {
-					continue;
-				}
-
-				const { error } = emit('message', JSON.stringify(events));
-
-				if (error) {
-					// for (const event of events) {
-					// 	console.error(
-					// 		'Error sending event to user:',
-					// 		locals.user.username,
-					// 		'sending push instead'
-					// 	);
-					// const success = await sendPushNotification(locals.user.id, event);
-					// 	if (success) {
-					// 		eventStore.removeEvent(event.id, locals.user.id);
-					// 		await db
-					// 			.update(eventsTable)
-					// 			.set({ read: true })
-					// 			.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.id, event.id)));
-					// 	}
-					// }
-
-					lock.set(false);
-					return;
-				}
-
-				console.log('Sent event to user:', locals.user.username, events);
-
-				// only remove the events if they were successfully sent
-				eventStore.removeEvents(events);
-
-				// update the sendAt field to the current time
-				await db
-					.update(eventsTable)
-					.set({ sendAt: new Date() })
-					.where(
-						inArray(
-							eventsTable.id,
-							events.map((event) => event.id)
-						)
-					);
-			} catch (error) {
-				console.error('Event stream delivery failed', error);
-				lock.set(false);
-				return;
-			}
+		const { error } = emit('message', JSON.stringify(persistent));
+		if (error) {
+			unsubscribe();
+			lock.set(false);
+			return unsubscribe;
 		}
+
+		eventHub.markDelivered(persistent);
+		return unsubscribe;
 	});
 };
 
@@ -123,8 +69,7 @@ export const DELETE: RequestHandler = async (event) => {
 	const id = z.string().parse(url.searchParams.get('id'));
 
 	await db
-		.update(eventsTable)
-		.set({ read: true })
+		.delete(eventsTable)
 		.where(and(eq(eventsTable.userId, locals.user.id), eq(eventsTable.id, id)));
 
 	return new Response(null, { status: 204 });

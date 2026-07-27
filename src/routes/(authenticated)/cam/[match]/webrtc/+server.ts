@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
-import { eventsTable, matchupTable } from '$lib/server/db/schema';
+import { matchupTable } from '$lib/server/db/schema';
+import { publishTransientEvents } from '$lib/server/event-service';
 import { assert, generateId, validateAuth } from '$lib/server/util';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
@@ -125,18 +126,16 @@ export const POST: RequestHandler = async (event) => {
 
 	const other = isOwner ? matchup.friendId : matchup.userId;
 	assert(other, 'Other user not found');
-	await db.insert(eventsTable).values({
+	publishTransientEvents({
 		id: generateId(),
 		userId: other,
 		type: EventType.WEBRTC,
 		createdAt: new Date(),
-		isTechnical: true,
-		persistent: false,
 		data: {
 			matchId: match,
 			payload: body
 		} satisfies WebRtcData
-	} satisfies typeof eventsTable.$inferInsert);
+	});
 
 	return new Response('ok', { status: 200 });
 };

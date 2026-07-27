@@ -1,4 +1,5 @@
 import { boolean, index, json, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 const fullCascade = { onDelete: 'cascade', onUpdate: 'cascade' } as const;
 
@@ -79,17 +80,20 @@ export const eventsTable = pgTable(
 			.references(() => usersTable.id, fullCascade),
 		type: text('type').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
-		sendAt: timestamp('send_at', { withTimezone: true, mode: 'date' }),
 		data: json('data'),
 		persistent: boolean('persistent').notNull().default(false),
 		read: boolean('read').notNull().default(false),
 		isTechnical: boolean('is_technical').notNull()
 	},
-	(t) => [index().on(t.userId, t.sendAt)]
+	(t) => [
+		index('event_unread_persistent_idx')
+			.on(t.userId, t.createdAt)
+			.where(sql`${t.persistent} = true AND ${t.read} = false`)
+	]
 );
 
-export type Event<T = {}> = typeof eventsTable.$inferSelect & {
-	data: T & Record<string, any>;
+export type Event<T = unknown> = Omit<typeof eventsTable.$inferSelect, 'data'> & {
+	data: T;
 };
 
 export const matchupTable = pgTable(

@@ -1,6 +1,7 @@
 import { EventType, type FriendRequestAcceptedData, type FriendRequestData } from '$lib/events';
 import { db } from '$lib/server/db';
-import { blocksTable, eventsTable, friendsTable, usersTable } from '$lib/server/db/schema';
+import { blocksTable, friendsTable, usersTable } from '$lib/server/db/schema';
+import { createDurableEvents } from '$lib/server/event-service';
 import { assert, generateId, validateAuth, validateForm } from '$lib/server/util';
 import { error, redirect } from '@sveltejs/kit';
 import { and, eq, or } from 'drizzle-orm';
@@ -104,7 +105,7 @@ export const actions: Actions = {
 				});
 
 				// notify both users
-				await db.insert(eventsTable).values([
+				await createDurableEvents([
 					{
 						id: generateId(),
 						userId: targetedUser.id,
@@ -113,11 +114,8 @@ export const actions: Actions = {
 							fromId: locals.user.id,
 							fromUsername: locals.user.username
 						} satisfies FriendRequestAcceptedData,
-						createdAt: new Date(),
-						persistent: false,
-						isTechnical: false,
-						read: false
-					} satisfies typeof eventsTable.$inferInsert,
+						createdAt: new Date()
+					},
 					{
 						id: generateId(),
 						userId: locals.user.id,
@@ -126,11 +124,8 @@ export const actions: Actions = {
 							fromId: targetedUser.id,
 							fromUsername: targetedUser.username
 						} satisfies FriendRequestAcceptedData,
-						createdAt: new Date(),
-						persistent: false,
-						isTechnical: false,
-						read: false
-					} satisfies typeof eventsTable.$inferInsert
+						createdAt: new Date()
+					}
 				]);
 
 				redirect(302, '/friends');
@@ -146,7 +141,7 @@ export const actions: Actions = {
 			});
 
 			// notify the targeted user
-			await db.insert(eventsTable).values({
+			await createDurableEvents({
 				id: generateId(),
 				userId: targetedUser.id,
 				type: EventType.FRIEND_REQUEST,
@@ -154,11 +149,8 @@ export const actions: Actions = {
 					fromId: locals.user.id,
 					fromUsername: locals.user.username
 				} satisfies FriendRequestData,
-				createdAt: new Date(),
-				persistent: true,
-				isTechnical: false,
-				read: false
-			} satisfies typeof eventsTable.$inferInsert);
+				createdAt: new Date()
+			});
 
 			redirect(302, '/friends');
 		}

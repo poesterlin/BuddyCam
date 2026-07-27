@@ -15,6 +15,13 @@
       "when": 1784970617351,
       "tag": "0001_add_user_blocks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785138130309,
+      "tag": "0002_optimize_event_delivery",
+      "breakpoints": true
     }
   ]
 }

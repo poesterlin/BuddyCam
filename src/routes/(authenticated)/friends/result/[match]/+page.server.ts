@@ -6,6 +6,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { EventType, type DeleteMatchupData } from '$lib/events';
 import { deleteFile } from '$lib/server/s3';
+import { publishPersistedEvents } from '$lib/server/event-service';
 
 export const load: PageServerLoad = async (event) => {
 	const locals = validateAuth(event);
@@ -66,20 +67,27 @@ export const actions: Actions = {
 			.limit(1);
 
 		assert(otherUser, 404, 'Other user not found');
-		await db.transaction(async (tx) => {
+		const createdEvent = await db.transaction(async (tx) => {
 			await tx.delete(matchupTable).where(eq(matchupTable.id, match));
-			await tx.insert(eventsTable).values({
-				id: generateId(),
-				userId: otherUserId,
-				type: EventType.DELETE_MATCHUP,
-				createdAt: new Date(),
-				data: {
-					matchId: match,
-					fromUsername: otherUser.username
-				} satisfies DeleteMatchupData,
-				isTechnical: false
-			});
+			const [created] = await tx
+				.insert(eventsTable)
+				.values({
+					id: generateId(),
+					userId: otherUserId,
+					type: EventType.DELETE_MATCHUP,
+					createdAt: new Date(),
+					data: {
+						matchId: match,
+						fromUsername: otherUser.username
+					} satisfies DeleteMatchupData,
+					isTechnical: false,
+					persistent: true,
+					read: false
+				})
+				.returning();
+			return created;
 		});
+		publishPersistedEvents(createdEvent);
 
 		redirect(302, '/');
 	}

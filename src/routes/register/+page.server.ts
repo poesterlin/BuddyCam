@@ -14,6 +14,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { z } from 'zod';
 import { EventType } from '$lib/events';
+import { createDurableEvents } from '$lib/server/event-service';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -86,15 +87,13 @@ export const actions: Actions = {
 				});
 			}
 
-			await db.insert(table.eventsTable).values({
+			await createDurableEvents({
 				id: generateId(),
 				userId: userId,
 				type: EventType.REGISTER,
 				data: null,
-				sendAt: null,
-				createdAt: new Date(),
-				isTechnical: false
-			} as any);
+				createdAt: new Date()
+			});
 
 			return redirect(302, safeRedirectPath(form.redirect));
 		}
